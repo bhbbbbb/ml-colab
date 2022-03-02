@@ -1,3 +1,4 @@
+from typing import Tuple
 import torch.nn as nn
 import torch
 from torch import Tensor
@@ -131,18 +132,34 @@ class MLP(nn.Module):
 
         print('Finished Training')
 
-    def start_eval(self, data_loader: DataLoader) -> None:
+    def start_eval(self, data_loader: DataLoader) -> Tuple[float, float]:
+        """start evaluation
+
+        Args:
+            data_loader (DataLoader)
+
+        Returns:
+            Tuple[float, float]: accuracy, loss
+        """
+
         self.eval()
         correct = 0
         total = 0
+        overall_loss = 0.0
         with torch.no_grad():
             for data in data_loader:
                 images, labels = data[0].to(self.device), data[1].to(self.device)
                 outputs = self.forward(images)
+                loss = self.criterion(outputs, labels)
                 _, predicted = torch.max(outputs.data, 1)
                 total += labels.size(0)
                 correct += (predicted == labels).sum().item()
+                overall_loss += loss.item()
 
-        print('Accuracy of the network on the 10000 test images: %f %%' % (
-            100 * correct / total))
+        accuracy = 100 * correct / total
+        loss = overall_loss / len(data_loader)
+        print('Accuracy of the network on the 10000 test images: %f %%' % accuracy)
+        print(f"Loss: {loss: .6f}")
+
+        return accuracy, loss
     
