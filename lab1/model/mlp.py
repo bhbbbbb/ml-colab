@@ -17,7 +17,7 @@ class MLP(nn.Module):
     INPUT_DIM = 28 * 28
     OUTPUT_DIM = 10
     def __init__(self, layers: int, neurons: int, epochs: int, learning_rate: float = 0.001,
-                    start_epoch: int = 0, model_state_dict=None, optimizer_state_dict=None):
+                    start_epoch: int = 0, model_states=None):
         """_summary_
 
         Args:
@@ -37,6 +37,7 @@ class MLP(nn.Module):
         self.neurons = neurons
         self.epochs = epochs
         self.learning_rate = learning_rate
+        self.start_epoch = start_epoch
 
         self._build(neurons, layers)
 
@@ -54,8 +55,8 @@ class MLP(nn.Module):
 
         # load saved weights if start from checkpoint
         if start_epoch > 0 and start_epoch <= epochs:
-            self.load_state_dict(model_state_dict)
-            self.optimizer.load_state_dict(optimizer_state_dict)
+            self.load_state_dict(model_states.model_state_dict)
+            self.optimizer.load_state_dict(model_states.optimizer_state_dict)
 
         return
     
@@ -64,7 +65,6 @@ class MLP(nn.Module):
         self.seq = nn.Sequential()
         if layers > 1:
             d = floor((2 * neurons / 3) / (layers - 1))
-            pass
         else: d = 0
 
         in_units = self.INPUT_DIM
@@ -73,32 +73,41 @@ class MLP(nn.Module):
         for i in range(1, layers + 1):
             self.seq.add_module(f"Lin{i}", nn.Linear(in_units, out_units))
             if i > 1:
-                self.seq.add_module(f"sigmoid{i}", nn.Sigmoid()) ##
+                self.seq.add_module(f"relu{i}", nn.ReLU()) ##
             in_units = out_units
             out_units = in_units - d
 
         self.seq.add_module("fc", nn.Linear(in_units, self.OUTPUT_DIM))
         self.seq.add_module("softmax", nn.Softmax(dim=1))
 
-        self._print_layers()
-
 
     def _print_layers(self):
         print(self.seq)
-        print("number of layer: {}  number of neurons: {}".format(self.layers, self.neurons))
+        print("number of layer: {}  number of neurons: {} eta: {}".format(self.layers, self.neurons, self.learning_rate))
 
     def forward(self, x: Tensor) -> Tensor:
         x = x.view(-1, 28*28)
         x = self.seq(x)
         return x
     
-    def start_train(self, data_loader: DataLoader) -> None:
+    def start_train(self, data_loader: DataLoader, checkpoints: list = None) -> None:
+        """start train
+
+        Args:
+            data_loader (DataLoader)
+            checkpoints (list, optional): list of epoch. specify which epoch should be save
+                Defaults to None.
+        """
+        self._print_layers()
         self.train() # set to train mode
 
-        log_sub_dir = os.path.join(LOG_DIR, f"l{self.layers}_n{self.neurons}")
+        log_sub_dir = os.path.join(LOG_DIR,
+                f"l{self.layers}_n{self.neurons}_eta{self.learning_rate}")
         if not os.path.isdir(log_sub_dir): os.makedirs(log_sub_dir)
 
-        for epoch in tqdm(range(self.epochs)):
+        if self.start_epoch:
+            print(f"restart at epoch: {self.start_epoch + 1}")
+        for epoch in tqdm(range(self.start_epoch, self.epochs)):
             running_loss = 0.0
             for i, data in enumerate(data_loader):
                 # get the inputs; data is a list of [inputs, labels]
@@ -116,19 +125,28 @@ class MLP(nn.Module):
 
                 # print statistics
                 running_loss += loss.item()
-                if i % 1000 == 999:    # print every 1000 mini-batches 
-                    print('[%d, %5d] loss: %.6f' %
-                        (epoch + 1, i + 1, running_loss / 999))
-                    running_loss = 0.0
+                # if i % 1000 == 999:    # print every 1000 mini-batches 
+                #     print('[%d, %5d] loss: %.6f' %
+                #         (epoch + 1, i + 1, running_loss / 999))
+                #     running_loss = 0.0
 
-            torch.save({
-                "start_epoch": epoch + 1,
-                "epochs": self.epochs,
-                "neurons": self.neurons,
-                "layers": self.layers,
-                "model_state_dict": self.state_dict(),
-                "optimizer_state_dict": self.optimizer.state_dict(),
-            }, os.path.join(log_sub_dir, f"l{self.layers}_n{self.neurons}_e{epoch+1}_of_{self.epochs}"))
+            overall_loss = running_loss / len(data_loader)
+            print('[%d, %5d] loss: %.6f' % (epoch + 1, i + 1, overall_loss))
+
+            if not checkpoints or (epoch + 1) in checkpoints:
+                torch.save({
+                    "start_epoch": epoch + 1,
+                    "epochs": self.epochs,
+                    "neurons": self.neurons,
+                    "layers": self.layers,
+                    "learning_rate": self.learning_rate,
+                    "model_states": {
+                        "model_state_dict": self.state_dict(),
+                        "optimizer_state_dict": self.optimizer.state_dict(),
+                        "loss": overall_loss,
+                    },
+                }, os.path.join(log_sub_dir, f"e{epoch+1}_of_{self.epochs}"))
+            print(f"\nEpoch: {epoch+2}/{self.epochs}")
 
         print('Finished Training')
 
@@ -142,6 +160,7 @@ class MLP(nn.Module):
             Tuple[float, float]: accuracy, loss
         """
 
+        print(f"start evaluation:\nlayers: {self.layers}\nneurons: {self.neurons}\nepoch: {self.start_epoch}\n")
         self.eval()
         correct = 0
         total = 0
@@ -160,6 +179,7 @@ class MLP(nn.Module):
         loss = overall_loss / len(data_loader)
         print('Accuracy of the network on the 10000 test images: %f %%' % accuracy)
         print(f"Loss: {loss: .6f}")
+        print("-------------------------------------------------")
 
         return accuracy, loss
     
