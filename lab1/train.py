@@ -28,7 +28,7 @@ def train_from_checkpoint(log_path: str, epochs: int, checkpoints: list):
 if __name__ == "__main__":
     
     trainloader, testloader = Dataset().load()
-    model = MLP(neurons=16, layers=16, epochs=1024, learning_rate=0.0001)
+    model = MLP(neurons=1024, layers=16, epochs=1024, learning_rate=0.0001)
     model.start_train(trainloader, checkpoints=[(16*i) for i in range(1, (1024//16)+1)])
     model.start_eval(testloader)
     # train_from_checkpoint(log_path="D:\Documents\\1102\AI\ml-practices\lab1\model\log\\relu\l16_n16\l16_n16_e16_of_16",
