@@ -24,9 +24,9 @@ class Dataset:
         transform = transforms.Compose([transforms.ToTensor(),])##
         # /content/drive/MyDrive/Colab Notebooks/data/MNIST/MNIST/raw/train-images-idx3-ubyte.gz
         trainset = torchvision.datasets.MNIST(root=self.ROOT, train=True,download=True, transform=transform)
-        trainloader = DataLoader(trainset, batch_size=32,shuffle=True, num_workers=2)
+        trainloader = DataLoader(trainset, batch_size=32,shuffle=True, num_workers=4, persistent_workers=True)
 
         testset = torchvision.datasets.MNIST(root=self.ROOT, train=False,download=True, transform=transform)
-        testloader = DataLoader(testset, batch_size=4,shuffle=True, num_workers=2)
+        testloader = DataLoader(testset, batch_size=4,shuffle=True, num_workers=4, persistent_workers=True)
 
         return trainloader, testloader

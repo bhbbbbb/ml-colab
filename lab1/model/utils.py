@@ -3,8 +3,8 @@ python utils.py --log="/path/to/log/root"
 """
 import os
 from typing import Tuple
-from dataset import Dataset
-from mlp import MLP
+# from dataset import Dataset
+from mlp import Model, ModelStates
 import torch
 import argparse
 
@@ -14,7 +14,6 @@ layers_list = [1, 2, 4, 8, 16]
 
 
 def generate_markdown_tables(log_root: str) -> list:
-    loader = Loader(log_root)
     neurons_list_str = [str(i) for i in neurons_list]
     tables = []
     loss_tables = []
@@ -41,7 +40,7 @@ def generate_markdown_tables(log_root: str) -> list:
             table_loss += f"| {layers} | "
 
             for neurons in neurons_list:
-                accuracy, loss = loader.load(layers, neurons, epochs)
+                accuracy, loss = load(log_root, layers, neurons, learning_rate=0.001, epoch=epochs)
                 table += f" {accuracy: .2f}% |"
                 table_loss += f" {loss: .3f} |"
 
@@ -54,40 +53,26 @@ def generate_markdown_tables(log_root: str) -> list:
     tables += loss_tables
     return tables
 
-class Loader:
-    log_root: str
+def load(log_root, layers, neurons, learning_rate, epoch) -> Tuple[float, float]:
+    """
+    Returns:
+        Tuple[float, float]: accuracy, loss
+    """
+    log_sub_dir = f"l{layers}_n{neurons}_eta{learning_rate}"
+    log_sub_dir = os.path.abspath(os.path.join(log_root, log_sub_dir))
 
-    def __init__(self, log_root):
-        self.log_root = log_root
-        _, self.test_loader = Dataset().load()
-        return
+    assert os.path.isdir(log_sub_dir)
 
-    def load(self, layers, neurons, epochs) -> Tuple[float, float]:
-        """
+    model_name = f"epoch_{epoch}"
 
-        Args:
-            layers (_type_): _description_
-            neurons (_type_): _description_
-            epochs (_type_): _description_
+    model_path = os.path.join(log_sub_dir, model_name)
 
-        Returns:
-            Tuple[float, float]: accuracy, loss
-        """
-        log_sub_dir = f"l{layers}_n{neurons}"
-        log_sub_dir = os.path.abspath(os.path.join(self.log_root, log_sub_dir))
+    assert os.path.isfile(model_path)
 
-        assert os.path.isdir(log_sub_dir)
+    model: Model = torch.load(model_path)
+    states: ModelStates = model["model_states"]
+    return states["val_acc"], states["loss"]
 
-        model_name = f"l{layers}_n{neurons}_e{epochs}_of_16"
-
-        model_path = os.path.join(log_sub_dir, model_name)
-
-        assert os.path.isfile(model_path)
-
-        model = torch.load(model_path)
-        model = MLP(**model)
-
-        return model.start_eval(self.test_loader)
 
 if __name__ == "__main__":
     
