@@ -74,8 +74,8 @@ class MLP(nn.Module):
 
         # load saved weights if start from checkpoint
         if start_epoch > 0 and start_epoch <= epochs:
-            self.load_state_dict(model_states.model_state_dict)
-            self.optimizer.load_state_dict(model_states.optimizer_state_dict)
+            self.load_state_dict(model_states["model_state_dict"])
+            self.optimizer.load_state_dict(model_states["optimizer_state_dict"])
 
         return
     
@@ -167,7 +167,7 @@ class MLP(nn.Module):
                     ),
                 ), os.path.join(log_sub_dir, f"epoch_{epoch+1}"))
             
-            if epoch + 1 <= self.epochs:
+            if epoch + 2 <= self.epochs:
                 print(f"\nEpoch: {epoch+2}/{self.epochs}")
 
         print('Finished Training')
