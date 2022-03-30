@@ -314,9 +314,10 @@ class ModelUtils:
         plt.plot(valid_data, label='valid')
         plt.title(title)
         plt.xlabel("epochs")
-        plt.show()
+        plt.legend()
         path = os.path.join(output_dir, title.lower())
         plt.savefig(path)
+        plt.show()
         return path
     
     @staticmethod
@@ -331,7 +332,8 @@ class ModelUtils:
             str: path to result figure
         """
         import pandas as pd
-        history: History = json.load(history_path)
+        with open(history_path, "r") as fin:
+            history: History = json.load(fin)
         
         df = pd.DataFrame(history["history"])
         ModelUtils._plot("Loss", df["train_loss"].tolist(), df["valid_loss"].tolist(), output_dir)
