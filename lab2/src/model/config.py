@@ -16,7 +16,7 @@ class Config(Namespace):
     # batch sizes
     BATCH_SIZE = {
         "train": 128, 
-        "eval": 64,
+        "eval": 1024,
     }
 
     # IMAGE_SHAPE = (224, 224)

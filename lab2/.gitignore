@@ -3,3 +3,5 @@ homework2_Dataset
 **/log
 
 src/test.py
+
+*.csv

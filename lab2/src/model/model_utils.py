@@ -2,7 +2,7 @@ from .config import Config
 from .dataset import Dataset
 import torch.nn as nn
 from torch import Tensor
-from typing import List, Tuple, TypedDict
+from typing import Dict, List, Tuple, TypedDict
 from argparse import Namespace
 from tqdm import tqdm
 import torch
@@ -40,9 +40,6 @@ class ModelStates(Namespace):
     # epoch to start from (0 is the first)
     start_epoch: int
 
-    # epoch to train until
-    epochs: int
-
     # config: Config
 
     ########## torch built-in model states ############
@@ -66,15 +63,10 @@ class ModelUtils:
 
     history: History
 
-    def __init__(self, model: nn.Module, datasets: Tuple[Dataset, Dataset, Dataset],
-        epochs: int, config: Config):
+    def __init__(self, model: nn.Module, config: Config):
 
         self.model = model
         self.model.to(config.DEVICE)
-        self.train_loader = datasets[0].data_loader
-        self.valid_loader = datasets[1].data_loader
-        self.test_loader  = datasets[2].data_loader
-        self.epochs = epochs
         self.config = config
 
         self.optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
@@ -86,17 +78,13 @@ class ModelUtils:
         return
 
     @classmethod
-    def load_checkpoint(cls, model: nn.Module, datasets: Tuple[Dataset, Dataset, Dataset], 
-            checkpoint_path: str, config: Config, epochs: int = None):
+    def load_checkpoint(cls, model: nn.Module, checkpoint_path: str, config: Config):
         """init ModelUtils class with the saved model (or checkpoint)
 
         Args:
             model (nn.Module): model architecture
-            datasets (Tuple[Dataset, Dataset, Dataset]): dataset
             checkpoint_path (str): path of saved model (or checkpoint)
             config (Config): config
-            epochs (int): defalut to None, if None. train to the epochs store in checkpoint.
-            Specify to change the target epochs
 
         """
 
@@ -104,11 +92,8 @@ class ModelUtils:
 
         tem = torch.load(checkpoint_path)
         checkpoint = ModelStates(**tem)
-        
-        if epochs is None:
-            epochs = checkpoint.epochs
 
-        new = ModelUtils(model, datasets, epochs, config)
+        new = ModelUtils(model, config)
 
         new.model.load_state_dict(checkpoint.model_state_dict)
         new.optimizer.load_state_dict(checkpoint.optimizer_state_dict)
@@ -117,20 +102,49 @@ class ModelUtils:
         new.root = os.path.dirname(checkpoint_path)
         log_path = os.path.join(new.root, f"{os.path.basename(new.root)}_history.json")
 
-        ### TEM
-        assert os.path.isfile(log_path)
-        ### TEM
-
         if os.path.isfile(log_path):
             with open(log_path, "r") as fin:
                 new.history = json.load(fin)
             
+        print(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
         return new
+
+    @classmethod
+    def load_last_checkpoint(cls, model: nn.Module, config: Config):
+
+        # arr = [dir for dir in os.listdir(config.LOG_DIR) if os.path.isdir(dir)]
+        arr = [dir for dir in os.listdir(config.LOG_DIR)
+            if os.path.isdir(os.path.join(config.LOG_DIR, dir))]
+
+        last_train_root = max(arr)
+        last_train_root = os.path.join(config.LOG_DIR, last_train_root)
+
+        PATTERN = r".+?_epoch_(\d+)"
+        import re
+        max_epoch = 0
+        max_idx = 0
+        save_list = os.listdir(last_train_root)
+        for idx, save in enumerate(save_list):
+            match = re.match(PATTERN, save)
+            if match:
+                epoch = int(match.group(1))
+                if epoch > max_epoch:
+                    max_epoch = epoch
+                    max_idx = idx
+        
+
+        last_save = save_list[max_idx]
+
+        last_save_path = os.path.join(last_train_root, last_save)
+
+        return cls.load_checkpoint(model, checkpoint_path=last_save_path, config=config)
+            
+
+
 
     def _save(self, cur_epoch: int, stat: Stat) -> str:
         tem = vars(ModelStates(
             start_epoch = cur_epoch + 1,
-            epochs = self.epochs,
             model_state_dict = self.model.state_dict(),
             optimizer_state_dict = self.optimizer.state_dict(),
             stat = vars(stat),
@@ -157,7 +171,7 @@ class ModelUtils:
     
 
 
-    def _train_epoch(self) -> Tuple[float, float]:
+    def _train_epoch(self, train_dataset: Dataset) -> Tuple[float, float]:
         """train a single epoch
 
         Returns:
@@ -168,7 +182,7 @@ class ModelUtils:
         train_loss = 0.0
         train_correct = 0
         
-        for data, label in tqdm(self.train_loader):
+        for data, label in tqdm(train_dataset.data_loader):
 
             data: Tensor
             label: Tensor
@@ -190,22 +204,22 @@ class ModelUtils:
             _, predicted = torch.max(output.data, 1)
             train_correct += (predicted == label).sum().item()
         
-        train_loss = train_loss / len(self.train_loader.dataset)
-        train_acc = train_correct / len(self.train_loader.dataset)
+        train_loss = train_loss / len(train_dataset)
+        train_acc = train_correct / len(train_dataset)
 
         return train_loss, train_acc
     
-    def _eval_epoch(self) -> Tuple[float, float]:
+    def _eval_epoch(self, eval_dataset: Dataset) -> Tuple[float, float]:
         """evaluate single epoch
 
         Returns:
-            Tuple[float, float]: valid_loss, valid_acc
+            Tuple[float, float]: eval_loss, eval_acc
         """
         self.model.eval()
         eval_loss = 0.0
         correct = 0
 
-        for data, target in self.test_loader:
+        for data, target in eval_dataset.data_loader:
             data: Tensor
             target: Tensor
 
@@ -220,16 +234,24 @@ class ModelUtils:
             _, predicted = output.max(dim=1)
             correct += (predicted == target).sum().item()
         
-        eval_loss = eval_loss / len(self.test_loader.dataset)
-        eval_acc = correct / len(self.test_loader.dataset)
+        eval_loss = eval_loss / len(eval_dataset)
+        eval_acc = correct / len(eval_dataset)
         return eval_loss, eval_acc
     
-    def train(self) -> str:
+    def train(self, datasets: Tuple[Dataset, Dataset, Dataset], epochs: int) -> str:
         """start training
+
+        Args:
+            datasets (Tuple[Dataset, Dataset, Dataset]): trainset, validset, testset
+            epochs (int): defalut to None, if None. train to the epochs store in checkpoint.
+            Specify to change the target epochs
 
         Returns:
             str: json path as the history
         """
+
+        assert epochs > self.start_epoch, f"expect epochs > {self.start_epoch}, got: epochs={epochs}"
+        trainset, validset, testset = datasets
 
         # counting for early stopping
         min_valid_loss = 999999
@@ -240,10 +262,10 @@ class ModelUtils:
             self.root = os.path.join(self.config.LOG_DIR, formatted_now())
             os.makedirs(self.root)
 
-        for epoch in range(self.start_epoch, self.epochs):
-            print(f"Epoch: {epoch + 1} / {self.epochs}")
-            train_loss, train_acc = self._train_epoch()
-            valid_loss, valid_acc = self._eval_epoch()
+        for epoch in range(self.start_epoch, epochs):
+            print(f"Epoch: {epoch + 1} / {epochs}")
+            train_loss, train_acc = self._train_epoch(trainset)
+            valid_loss, valid_acc = self._eval_epoch(validset)
 
             stat = Stat(
                 train_loss=train_loss,
@@ -253,28 +275,31 @@ class ModelUtils:
             )
             stat.display()
 
-            if self.config.EARLY_STOPPING:
-                if valid_loss > min_valid_loss:
-                    counter += 1
+            if valid_loss >= min_valid_loss:
+                counter += 1
+                if self.config.EARLY_STOPPING:
+                    print(f"Early stopping counter: {counter} / {self.config.EARLY_STOPPING_THRESHOLD}")
                     if counter == self.config.EARLY_STOPPING_THRESHOLD:
                         print("Early stopping!")
                         self._save(epoch, stat)
                         break
                 else:
-                    min_valid_loss = valid_loss
-                    counter = 0
+                    print(f"Early stopping counter: {counter} / infinity")
+            else:
+                min_valid_loss = valid_loss
+                counter = 0
             
-            if epoch == self.epochs - 1:
+            if epoch == epochs - 1:
                 self._save(epoch, stat)
             
             elif self.config.EPOCHS_PER_CHECKPOINT and (epoch + 1) % self.config.EPOCHS_PER_CHECKPOINT == 0:
                 self._save(epoch, stat)
 
-            if epoch != self.epochs - 1:
+            if epoch != epochs - 1:
                 self._log(stat)
 
         print("Training is finish")
-        test_loss, test_acc = self._eval_epoch()
+        test_loss, test_acc = self._eval_epoch(testset)
         stat.test_loss = test_loss
         stat.test_acc = test_acc
         stat.display()
@@ -295,7 +320,7 @@ class ModelUtils:
         return path
     
     @staticmethod
-    def plot(history_path: str, output_dir: str) -> str:
+    def plot_history(history_path: str, output_dir: str) -> str:
         """plot the loss-epoch figure
 
         Args:
@@ -305,7 +330,6 @@ class ModelUtils:
         Returns:
             str: path to result figure
         """
-        import json
         import pandas as pd
         history: History = json.load(history_path)
         
@@ -314,7 +338,58 @@ class ModelUtils:
         ModelUtils._plot("Accuracy", df["train_acc"].tolist(), df["valid_acc"].tolist(), output_dir)
         return
     
-    # def inference(self, ):
+    def inference(self, dataset: Dataset, categories: list = None, confidence: bool = True):
+        """inference for the given test dataset
+
+        Args:
+            confidence (boolean): whether output the `confidence` column. Default to True.
+        
+        Returns:
+            df (pd.DataFrame): {"label": [...], "confidence"?: [...]}
+        """
+
+        if categories is None:
+            categories = [i for i in range(self.config.NUM_CLASS)]
+        
+        def mapping(x):
+            return categories[x]
+
+        import numpy as np
+        import pandas as pd
+
+        label_col = np.empty(len(dataset), dtype=type(categories[0]))
+        if confidence:
+            confidence_col = np.empty(len(dataset), dtype=float)
+            data = {"label": label_col, "confidence": confidence_col}
+        
+        else:
+            data = {"label": label_col}
+        
+        df = pd.DataFrame(data)
+        
+        with torch.inference_mode():
+            for data, indexes in tqdm(dataset.data_loader):
+                data: Tensor
+                indexes: Tensor
+                data = data.to(self.config.DEVICE)
+                output: Tensor = self.model(data)
+
+                confidences, indices = output.max(dim=1)
+
+                labels = list(map(mapping, indices.tolist()))
+                
+                indexes = indexes.tolist()
+                if confidence:
+                    df.loc["label", indexes] = labels
+                    df.loc["confidence", indexes] = confidences.tolist()
+                else:
+                    df.iloc[indexes] = labels
+        
+        return df
+
+
+
+
 
 
 

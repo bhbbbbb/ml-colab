@@ -26,32 +26,47 @@ class Dataset(TorchDataset):
     ])
     
     def __init__(self, df: pd.DataFrame, config: Config,
-        mode: Literal["train", "test"] = "train", transform: transforms.Compose = TRAIN_TRANSFORM):
+        mode: Literal["train", "eval", "inference"] = "train",
+        transform: transforms.Compose = None):
         """
         Args:
-            df (pd.DataFrame): in the form that
+            df (pd.DataFrame): for mode `train` and `eval` df should be in the form that
             |   img (str)      |  label (np.integer) |
             |:----------------:|:-----------------:|
             | <path to image1> | <label of image1> |
             | <path to image2> | <label of image2> |
             | &vellip; | &vellip; |
 
-            mode (Literal[&quot;train&quot;, &quot;eval&quot;], optional): Defaults to "train".
+            for mode `inference`, df can only contain `img` column
+
+            mode: Defaults to "train".
         """
-        assert mode in ["train", "eval"], f"unknown type of mode: {mode}"
-        # assert df.dtypes["img"] == str, f"the dtype of 'img' column must to be str, got {df.dtypes['img']}"
-        assert np.issubdtype(df.dtypes["label"], np.integer), f"the dtype of 'img' column must to be np.integer or its subdtype, got {df.dtypes['label']}"
-        df["label"] = df["label"].astype(np.int64)
+        assert mode in ["train", "eval", "inference"], f"unknown type of mode: {mode}"
+
+        assert "img" in df.columns
+
+        if mode != "inference":
+            assert np.issubdtype(df.dtypes["label"], np.integer), f"the dtype of 'img' column must to be np.integer or its subdtype, got {df.dtypes['label']}"
+            df["label"] = df["label"].astype(np.int64)
 
         self.mode = mode
         self.df = df
-        self.transform = transform
+        if transform is None:
+            self.transform = self.TRAIN_TRANSFORM if mode == "train" else self.EVAL_TRANSFORM
+        else:
+            self.transform = transform
+        
         self.config = config
         return
     
     @classmethod
-    def split(cls, df: pd.DataFrame, split_ratio: Tuple[float, float],
-            transforms: Tuple[transforms.Compose, transforms.Compose], config: Config):
+    def split(
+        cls,
+        df: pd.DataFrame,
+        split_ratio: Tuple[float, float],
+        config: Config,
+        transforms: Tuple[transforms.Compose, transforms.Compose] = None,
+        ):
         """get dataset by split then with given ratio
 
         Args:
@@ -76,6 +91,8 @@ class Dataset(TorchDataset):
         valid_df, test_df = train_test_split(eval_df, train_size=valid_set_size,
                             shuffle=True, random_state=seed)
         
+        if transforms is None: # use default transform
+            transforms = (None, None)
         return (
             cls(train_df, config=config, mode="train", transform=transforms[0]),
             cls(valid_df, config=config, mode="eval", transform=transforms[1]),
@@ -88,11 +105,18 @@ class Dataset(TorchDataset):
         # 2. Preprocess the data (torchvision.Transform).
         # 3. Return the data (e.g. image and label)
         # --------------------------------------------
-        imgpath, label = self.df.iloc[index]
+        if self.mode != "inference":
+            imgpath, label = self.df.iloc[index]
+        else:
+            imgpath, = self.df.iloc[index]
+        
         img = Image.open(imgpath).convert("RGB")
         img = self.transform(img)
 
-        return img, label
+        if self.mode != "inference":
+            return img, label
+
+        return img, index
         
     def __len__(self):
         # --------------------------------------------
@@ -102,9 +126,11 @@ class Dataset(TorchDataset):
 
     @property
     def data_loader(self):
+        if self.mode == "inference": mode = "eval"
+        else: mode = self.mode
         return DataLoader(
             self,
-            batch_size = self.config.BATCH_SIZE[self.mode],
+            batch_size = self.config.BATCH_SIZE[mode],
             shuffle = self.mode == "train",
             num_workers = self.config.NUM_WORKERS,
             persistent_workers= self.config.PERSISTENT_WORKERS,
