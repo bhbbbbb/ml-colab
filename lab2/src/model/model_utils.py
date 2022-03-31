@@ -31,13 +31,13 @@ class Stat:
     
     def display(self):
         if hasattr(self, "test_loss") and hasattr(self, "test_acc"):
-            print(f"test_loss: {self.valid_loss: .6f}")
-            print(f"test_acc: {self.train_acc * 100: .2f} %")
+            print(f"test_loss: {self.test_loss: .6f}")
+            print(f"test_acc: {self.test_acc * 100: .2f} %")
         else:
             print(f"train_loss: {self.train_loss: .6f}")
             print(f"train_acc: {self.train_acc * 100: .2f} %")
             print(f"valid_loss: {self.valid_loss: .6f}")
-            print(f"valid_acc: {self.train_acc * 100: .2f} %")
+            print(f"valid_acc: {self.valid_acc * 100: .2f} %")
         return
 
 
