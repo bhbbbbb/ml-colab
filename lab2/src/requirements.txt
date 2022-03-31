@@ -1,0 +1,63 @@
+astroid==2.4.2
+backcall @ file:///home/ktietz/src/ci/backcall_1611930011877/work
+beautifulsoup4==4.9.1
+certifi==2021.10.8
+cffi @ file:///C:/ci_310/cffi_1642682485096/work
+colorama==0.4.4
+cycler @ file:///tmp/build/80754af9/cycler_1637851556182/work
+debugpy @ file:///C:/ci/debugpy_1637073815078/work
+decorator @ file:///opt/conda/conda-bld/decorator_1643638310831/work
+entrypoints==0.3
+fonttools==4.25.0
+ipykernel @ file:///C:/ci/ipykernel_1633545574250/work/dist/ipykernel-6.4.1-py3-none-any.whl
+ipython @ file:///C:/ci/ipython_1643818321468/work
+ipython-genutils @ file:///tmp/build/80754af9/ipython_genutils_1606773439826/work
+isort==5.6.4
+jedi @ file:///C:/ci/jedi_1644315425835/work
+joblib==1.1.0
+jupyter-client @ file:///opt/conda/conda-bld/jupyter_client_1643638337975/work
+jupyter-core @ file:///C:/ci/jupyter_core_1636537213213/work
+kiwisolver @ file:///C:/ci/kiwisolver_1644962567532/work
+lazy-object-proxy==1.4.3
+matplotlib @ file:///C:/ci/matplotlib-suite_1645455836921/work
+matplotlib-inline @ file:///tmp/build/80754af9/matplotlib-inline_1628242447089/work
+mccabe==0.6.1
+mkl-fft==1.3.0
+mkl-random==1.1.0
+mkl-service==2.3.0
+munkres==1.1.4
+nest-asyncio @ file:///tmp/build/80754af9/nest-asyncio_1613680548246/work
+numpy @ file:///C:/ci/numpy_and_numpy_base_1603466732592/work
+olefile @ file:///Users/ktietz/demo/mc3/conda-bld/olefile_1629805411829/work
+packaging @ file:///tmp/build/80754af9/packaging_1637314298585/work
+pandas==1.4.1
+parso @ file:///opt/conda/conda-bld/parso_1641458642106/work
+pickleshare @ file:///tmp/build/80754af9/pickleshare_1606932040724/work
+Pillow==8.4.0
+prompt-toolkit @ file:///tmp/build/80754af9/prompt-toolkit_1633440160888/work
+pycparser @ file:///tmp/build/80754af9/pycparser_1636541352034/work
+Pygments @ file:///opt/conda/conda-bld/pygments_1644249106324/work
+pylint==2.6.0
+pyparsing @ file:///tmp/build/80754af9/pyparsing_1635766073266/work
+python-dateutil @ file:///tmp/build/80754af9/python-dateutil_1626374649649/work
+pytz==2022.1
+pywin32==302
+pyzmq @ file:///C:/ci/pyzmq_1638435185959/work
+scikit-learn==1.0.2
+scipy==1.8.0
+sip==4.19.13
+six==1.15.0
+sklearn==0.0
+soupsieve==2.0.1
+threadpoolctl==3.1.0
+toml==0.10.1
+torch==1.10.2
+torchaudio==0.10.2
+torchvision==0.11.3
+tornado @ file:///C:/ci/tornado_1606942392901/work
+tqdm @ file:///tmp/build/80754af9/tqdm_1635330843403/work
+traitlets @ file:///tmp/build/80754af9/traitlets_1636710298902/work
+typing-extensions @ file:///tmp/build/80754af9/typing_extensions_1631814937681/work
+wcwidth @ file:///Users/ktietz/demo/mc3/conda-bld/wcwidth_1629357192024/work
+wincertstore==0.2
+wrapt==1.12.1
