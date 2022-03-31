@@ -2,7 +2,12 @@ from .config import Config
 from .dataset import Dataset
 import torch.nn as nn
 from torch import Tensor
-from typing import Dict, List, Tuple, TypedDict
+from typing import Dict, List, Tuple
+try:
+    from typing import TypedDict
+except ImportError: # for python < 3.8
+    from typing_extensions import TypedDict
+
 from argparse import Namespace
 from tqdm import tqdm
 import torch

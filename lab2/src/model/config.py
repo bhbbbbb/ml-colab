@@ -2,7 +2,6 @@
 from argparse import Namespace
 import os
 import torch
-from typing import TypedDict
 
 class Config(Namespace):
 
