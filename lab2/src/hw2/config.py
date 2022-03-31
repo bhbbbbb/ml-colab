@@ -15,5 +15,5 @@ class Hw2Config(Config):
     EARLY_STOPPING: bool = True
 
     # only matter when EARLY_STOPPING is set to True
-    EARLY_STOPPING_THRESHOLD: int = 50
+    EARLY_STOPPING_THRESHOLD: int = 20
 

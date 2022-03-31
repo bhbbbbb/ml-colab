@@ -110,6 +110,8 @@ class ModelUtils:
         if os.path.isfile(log_path):
             with open(log_path, "r") as fin:
                 new.history = json.load(fin)
+                if len(new.history["history"]) > new.start_epoch:
+                    new.history["history"] = new.history["history"][:new.start_epoch]
             
         print(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
         return new
@@ -117,9 +119,16 @@ class ModelUtils:
     @classmethod
     def load_last_checkpoint(cls, model: nn.Module, config: Config):
 
-        # arr = [dir for dir in os.listdir(config.LOG_DIR) if os.path.isdir(dir)]
-        arr = [dir for dir in os.listdir(config.LOG_DIR)
-            if os.path.isdir(os.path.join(config.LOG_DIR, dir))]
+        def is_not_empty_dir(dir: str) -> bool:
+            dir = os.path.join(config.LOG_DIR, dir)
+            if os.path.isdir(dir):
+                if len(os.listdir(dir)) == 0: # if empty
+                    os.removedirs(dir)
+                    return False
+                else:
+                    return True
+
+        arr = [dir for dir in os.listdir(config.LOG_DIR) if is_not_empty_dir(dir)]
 
         last_train_root = max(arr)
         last_train_root = os.path.join(config.LOG_DIR, last_train_root)
@@ -141,6 +150,7 @@ class ModelUtils:
         last_save = save_list[max_idx]
 
         last_save_path = os.path.join(last_train_root, last_save)
+        print(f"Try loading: {last_save_path}")
 
         return cls.load_checkpoint(model, checkpoint_path=last_save_path, config=config)
             
