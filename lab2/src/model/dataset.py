@@ -1,13 +1,18 @@
 # required before pythonV3.10
 from __future__ import annotations
-from typing import Literal
+
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
+
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
 import pandas as pd
 import numpy as np
 from PIL import Image
-from typing import Tuple, List
+from typing import Tuple
 from sklearn.model_selection import train_test_split
 from .config import Config
 
