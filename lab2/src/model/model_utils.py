@@ -167,8 +167,8 @@ class ModelUtils:
         now = formatted_now()
         
         name = f"{now}_epoch_{cur_epoch + 1}"
+        os.makedirs(self.root, exist_ok=True)
         path = os.path.join(self.root, name)
-        if not os.path.isdir(self.root): os.makedirs(self.root)
         torch.save(tem, path)
         self.history["checkpoints"][cur_epoch + 1] = name
         return name
@@ -177,6 +177,7 @@ class ModelUtils:
 
         self.history["history"].append(vars(stat))
         self.history["root"] = self.root
+        os.makedirs(self.root, exist_ok=True)
         name = f"{os.path.basename(self.root)}_history.json"
         path = os.path.join(self.root, name)
         if not os.path.isdir(self.root): os.makedirs(self.root)
@@ -273,9 +274,7 @@ class ModelUtils:
         counter = 0
 
         if self.start_epoch == 0:
-            # mkdir for new training log
             self.root = os.path.join(self.config.LOG_DIR, formatted_now())
-            os.makedirs(self.root)
 
         for epoch in range(self.start_epoch, epochs):
             print(f"Epoch: {epoch + 1} / {epochs}")
