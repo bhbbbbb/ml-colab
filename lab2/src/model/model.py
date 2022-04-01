@@ -1,4 +1,5 @@
 
+from typing import Tuple
 import torch.nn as nn
 import numpy as np
 import torch
@@ -26,7 +27,6 @@ class _BaseNN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.seq(x)
     
-    # TODO
     def summary(self) -> str:
         def prod(arr: list) -> int:
             res = 1
@@ -35,11 +35,18 @@ class _BaseNN(nn.Module):
             return res
         
         sum = 0
+        layers_name = "Layer's name"
+        print(f"{layers_name:25}\t{'Size':<30}\t{'Num of params':>12}")
         for name, param in self.named_parameters():
-            print(name)
-            print(param.size())
-            print(prod(param.size()))
+            print(f"{name :25}\t{str(param.size()):<30}\t{prod(param.size()):>12}")
             sum += prod(param.size())
+        print(f"--------------------------------------------------------")
+
+        print(f"total params: {sum}", end="")
+        if int(sum / 1e9): print(f" = {sum / 1e9:.2}G")
+        elif int(sum / 1e6): print(f" = {sum / 1e6:.2}M")
+        elif int(sum / 1e3): print(f" = {sum / 1e3:.2}K")
+        print("")
         
 
 class FatLeNet5(_BaseNN):
