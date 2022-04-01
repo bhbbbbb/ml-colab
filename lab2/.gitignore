@@ -2,6 +2,10 @@ homework2_Dataset
 
 **/log
 
-src/test.py
 
 *.csv
+
+**/pretrained_weight
+
+**/test.py
+lab2.py
