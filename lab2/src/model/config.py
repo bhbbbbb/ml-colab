@@ -10,7 +10,7 @@ class Config(Namespace):
 
     # config for torch's DataLoader
     NUM_WORKERS = 4
-    PERSISTENT_WORKERS = True if os.name == "nt" else False
+    PERSISTENT_WORKERS = True if os.name == "nt" and NUM_WORKERS else False
 
     # batch sizes
     BATCH_SIZE = {
