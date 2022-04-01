@@ -1,3 +1,4 @@
+import re
 from .config import Config
 from .dataset import Dataset
 import torch.nn as nn
@@ -105,11 +106,21 @@ class ModelUtils:
         new.start_epoch = checkpoint.start_epoch
         
         new.root = os.path.dirname(checkpoint_path)
-        log_path = os.path.join(new.root, f"{os.path.basename(new.root)}_history.json")
+        HISTORY_JSON_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}_history.json"
 
-        if os.path.isfile(log_path):
-            with open(log_path, "r") as fin:
+        tem = [name for name in os.listdir(new.root) if re.match(HISTORY_JSON_PATTERN, name)]
+
+        assert len(tem) <= 1, f"Suppose <= 1 history.json in the folder, but got {len(tem)}"
+
+        if len(tem) == 0:
+            print(f"Warning: No history.json in {new.root}")
+        else:
+            history_log_name = tem[0]
+
+            history_log_path = os.path.join(new.root, history_log_name)
+            with open(history_log_path, "r") as fin:
                 new.history = json.load(fin)
+                new.history["root"] = new.root
                 if len(new.history["history"]) > new.start_epoch:
                     new.history["history"] = new.history["history"][:new.start_epoch]
             
@@ -417,11 +428,10 @@ class ModelUtils:
         return df
 
 
-
-
-
-
-
 from datetime import datetime
 def formatted_now():
     return datetime.now().strftime("%Y%m%dT%H-%M-%S")
+
+
+class Logger:
+    pass
