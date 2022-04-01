@@ -119,22 +119,34 @@ class ModelUtils:
     @classmethod
     def load_last_checkpoint(cls, model: nn.Module, config: Config):
 
-        def is_not_empty_dir(dir: str) -> bool:
-            dir = os.path.join(config.LOG_DIR, dir)
-            if os.path.isdir(dir):
-                if len(os.listdir(dir)) == 0: # if empty
-                    os.removedirs(dir)
-                    return False
-                else:
-                    return True
+        import re
 
-        arr = [dir for dir in os.listdir(config.LOG_DIR) if is_not_empty_dir(dir)]
+        TIME_FORMAT_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}"
+        def is_timeformatted_not_empty(name: str) -> bool:
+            """check whether a name of dir is start with formatted time and not empty
+
+            E.g:
+                - [v] 20220330T16-31-29_some_addtion 
+                - [x] ResNet_1 
+            """
+            match = re.match(TIME_FORMAT_PATTERN, name)
+            if not match:
+                return False
+            
+            path = os.path.join(config.LOG_DIR, name)
+            if len(os.listdir(path)) == 0: # if empty
+                os.removedirs(path)
+                return False
+            else:
+                return True
+
+        arr = [dir_name for dir_name in os.listdir(config.LOG_DIR)
+                                            if is_timeformatted_not_empty(dir_name)]
 
         last_train_root = max(arr)
         last_train_root = os.path.join(config.LOG_DIR, last_train_root)
 
         PATTERN = r".+?_epoch_(\d+)"
-        import re
         max_epoch = 0
         max_idx = 0
         save_list = os.listdir(last_train_root)
@@ -170,6 +182,7 @@ class ModelUtils:
         os.makedirs(self.root, exist_ok=True)
         path = os.path.join(self.root, name)
         torch.save(tem, path)
+        print(f"Checkpoint: {name} is saved.")
         self.history["checkpoints"][cur_epoch + 1] = name
         return name
     
