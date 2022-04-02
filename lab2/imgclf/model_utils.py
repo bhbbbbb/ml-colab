@@ -290,7 +290,7 @@ class ModelUtils:
         path = os.path.join(self.root, name)
         torch.save(tem, path)
         print(f"Checkpoint: {name} is saved.")
-        self.history["checkpoints"][cur_epoch + 1] = name
+        self.history_utils.history["checkpoints"][cur_epoch + 1] = name
         return name
     
 
