@@ -173,6 +173,7 @@ class HistoryUtils:
 class ModelUtils:
 
     history: History
+    logger: Logger # TODO make some msg print to log
 
     def __init__(self, model: nn.Module, config: Config):
 
@@ -188,7 +189,7 @@ class ModelUtils:
         time_str = formatted_now()
         self.root = os.path.join(self.config.LOG_DIR, time_str)
         self.history_utils = HistoryUtils(root=self.root)
-        self.logger = Logger(self.root)
+        # self.logger = ? TODO
         return
 
     @classmethod
@@ -214,6 +215,7 @@ class ModelUtils:
         new.start_epoch = checkpoint.start_epoch
         
         new.root = os.path.dirname(checkpoint_path)
+        new.logger = Logger(new.root)
         new.logger.reset_log_file_root(new.root)
         new.history_utils = HistoryUtils.load_history(new.root, new.start_epoch, new.logger)
         new.logger.log(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
@@ -468,6 +470,9 @@ class ModelUtils:
                     df.iloc[indexes] = labels
         
         return df
+    
+    def plot_history(self):
+        self.history_utils.plot()
 
 
 def formatted_now():

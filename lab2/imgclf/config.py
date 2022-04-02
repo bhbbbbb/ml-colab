@@ -50,6 +50,6 @@ class Config(NamespaceDict):
     
     def display(self):
         print("Configuration:")
-        for attr, value in dict(self):
+        for attr, value in dict(self).items():
             print("{:30} {}".format(attr, value))
         print("\n")
