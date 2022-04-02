@@ -18,6 +18,8 @@ import numpy as np
 
 from .config import Config
 from .dataset import Dataset
+from .logger import Logger
+from .base.writable import Writable
 
 class Stat:
     train_loss: float
@@ -69,6 +71,105 @@ class History(TypedDict):
     checkpoints: dict
 
 
+class HistoryUtils:
+    """Utils for handling the operation relate to history.json"""
+
+    history: History
+    root: str
+    path: str
+
+    HISTORY_JSON_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}_history.json"
+
+    def __init__(self, root: str, path: str = None, history: History = None):
+        self.root = root
+        root_name = os.path.dirname(root)
+        if path is None:
+            self.path = os.path.join(root, f"{root_name}_history.json")
+        else:
+            self.path = path
+
+        if history is None:
+            self.history = History(root=root, history=[], checkpoints={})
+        else:
+            self.history = history
+        return
+
+    @classmethod
+    def load_history(cls, root: str, start_epoch: int, logger: Writable):
+
+        tem = [name for name in os.listdir(root) if re.match(cls.HISTORY_JSON_PATTERN, name)]
+
+        assert len(tem) <= 1, f"Suppose <= 1 history.json in the folder, but got {len(tem)}"
+
+        if len(tem) == 0:
+            logger.write(f"Warning: No history.json in {root}")
+        else:
+            history_log_name = tem[0]
+
+            history_log_path = os.path.join(root, history_log_name)
+            with open(history_log_path, "r") as fin:
+                history = json.load(fin)
+                history["root"] = root
+                if len(history["history"]) > start_epoch:
+                    history["history"] = history["history"][:start_epoch]
+            
+        return cls(root=root, path=history_log_path, history=history)
+
+    def log_history(self, stat: Stat) -> str:
+        """log history for the statistics coming from new epoch
+
+        Args:
+            stat (Stat): statistics data
+
+        Returns:
+            str: path to the log file history.json
+        """
+        self.history["history"].append(vars(stat))
+        self.history["root"] = self.root
+        os.makedirs(self.root, exist_ok=True)
+
+        os.makedirs(self.root, exist_ok=True)
+        with open(self.path, "w") as fout:
+            json.dump(self.history, fout, indent=4)
+        
+        return self.path
+    
+    def plot(self):
+        HistoryUtils.plot_history(self.path, self.root)
+        return
+
+    @staticmethod
+    def _plot(title: str, train_data: list, valid_data: list, output_dir: str) -> str:
+        plt.figure(figsize=(10,5))
+        plt.plot(train_data, label="train")
+        plt.plot(valid_data, label="valid")
+        plt.title(title)
+        plt.xlabel("epochs")
+        plt.legend()
+        path = os.path.join(output_dir, title.lower())
+        plt.savefig(path)
+        plt.show()
+        return path
+
+
+    @staticmethod
+    def plot_history(history_path: str, output_dir: str):
+        """plot the loss-epoch figure
+
+        Args:
+            history_path (str): file of history (in json)
+            output_dir (str): dir to export the result figure
+        """
+        with open(history_path, "r") as fin:
+            history: History = json.load(fin)
+        
+        df = pd.DataFrame(history["history"])
+        HistoryUtils._plot("Loss", df["train_loss"].tolist(), df["valid_loss"].tolist(), output_dir)
+        HistoryUtils._plot("Accuracy", df["train_acc"].tolist(),
+                            df["valid_acc"].tolist(), output_dir)
+        return
+    
+
 class ModelUtils:
 
     history: History
@@ -83,8 +184,11 @@ class ModelUtils:
         self.criterion = torch.nn.CrossEntropyLoss()
         self.start_epoch = 0
 
-        self.root = config.LOG_DIR
-        self.history = History(root="", history=[], checkpoints={})
+        # init for history and log
+        time_str = formatted_now()
+        self.root = os.path.join(self.config.LOG_DIR, time_str)
+        self.history_utils = HistoryUtils(root=self.root)
+        self.logger = Logger(self.root)
         return
 
     @classmethod
@@ -110,25 +214,9 @@ class ModelUtils:
         new.start_epoch = checkpoint.start_epoch
         
         new.root = os.path.dirname(checkpoint_path)
-        HISTORY_JSON_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}_history.json"
-
-        tem = [name for name in os.listdir(new.root) if re.match(HISTORY_JSON_PATTERN, name)]
-
-        assert len(tem) <= 1, f"Suppose <= 1 history.json in the folder, but got {len(tem)}"
-
-        if len(tem) == 0:
-            print(f"Warning: No history.json in {new.root}")
-        else:
-            history_log_name = tem[0]
-
-            history_log_path = os.path.join(new.root, history_log_name)
-            with open(history_log_path, "r") as fin:
-                new.history = json.load(fin)
-                new.history["root"] = new.root
-                if len(new.history["history"]) > new.start_epoch:
-                    new.history["history"] = new.history["history"][:new.start_epoch]
-            
-        print(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
+        new.logger.reset_log_file_root(new.root)
+        new.history_utils = HistoryUtils.load_history(new.root, new.start_epoch, new.logger)
+        new.logger.log(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
         return new
 
     @classmethod
@@ -198,28 +286,6 @@ class ModelUtils:
         self.history["checkpoints"][cur_epoch + 1] = name
         return name
     
-    def _log(self, stat: Stat) -> str:
-        """log history for the statistics coming from new epoch
-
-        Args:
-            stat (Stat): statistics data
-
-        Returns:
-            str: path to the log file history.json
-        """
-
-        self.history["history"].append(vars(stat))
-        self.history["root"] = self.root
-        os.makedirs(self.root, exist_ok=True)
-        name = f"{os.path.basename(self.root)}_history.json"
-        path = os.path.join(self.root, name)
-
-        os.makedirs(self.root, exist_ok=True)
-        with open(path, "w") as fout:
-            json.dump(self.history, fout, indent=4)
-        return path
-    
-
 
     def _train_epoch(self, train_dataset: Dataset) -> Tuple[float, float]:
         """train a single epoch
@@ -309,9 +375,6 @@ class ModelUtils:
         min_valid_loss = 999999
         counter = 0
 
-        if self.start_epoch == 0:
-            self.root = os.path.join(self.config.LOG_DIR, formatted_now())
-
         for epoch in range(self.start_epoch, epochs):
             print(f"Epoch: {epoch + 1} / {epochs}")
             train_loss, train_acc = self._train_epoch(trainset)
@@ -350,46 +413,15 @@ class ModelUtils:
                 self._save(epoch, stat)
 
             if epoch != epochs - 1:
-                self._log(stat)
+                self.history_utils.log_history(stat)
 
         print("Training is finish")
         test_loss, test_acc = self._eval_epoch(testset)
         stat.test_loss = test_loss
         stat.test_acc = test_acc
         stat.display()
-        return self._log(stat)
+        return self.history_utils.log_history(stat)
     
-    @staticmethod
-    def _plot(title: str, train_data: list, valid_data: list, output_dir: str) -> str:
-        plt.figure(figsize=(10,5))
-        plt.plot(train_data, label="train")
-        plt.plot(valid_data, label="valid")
-        plt.title(title)
-        plt.xlabel("epochs")
-        plt.legend()
-        path = os.path.join(output_dir, title.lower())
-        plt.savefig(path)
-        plt.show()
-        return path
-    
-    @staticmethod
-    def plot_history(history_path: str, output_dir: str) -> str:
-        """plot the loss-epoch figure
-
-        Args:
-            history_path (str): file of history (in json)
-            output_dir (str): dir to export the result figure
-
-        Returns:
-            str: path to result figure
-        """
-        with open(history_path, "r") as fin:
-            history: History = json.load(fin)
-        
-        df = pd.DataFrame(history["history"])
-        ModelUtils._plot("Loss", df["train_loss"].tolist(), df["valid_loss"].tolist(), output_dir)
-        ModelUtils._plot("Accuracy", df["train_acc"].tolist(), df["valid_acc"].tolist(), output_dir)
-        return
     
     def inference(self, dataset: Dataset, categories: list = None, confidence: bool = True):
         """inference for the given test dataset
@@ -440,7 +472,3 @@ class ModelUtils:
 
 def formatted_now():
     return datetime.now().strftime("%Y%m%dT%H-%M-%S")
-
-
-class Logger:
-    pass

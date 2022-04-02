@@ -51,9 +51,10 @@ class Dataset(TorchDataset):
         assert "img" in df.columns
 
         if mode != "inference":
-            assert np.issubdtype(df.dtypes["label"], np.integer),\
-                f"the dtype of 'img' column must to be np.integer or its subdtype,\
-                got {df.dtypes['label']}"
+            assert np.issubdtype(df.dtypes["label"], np.integer), (
+                f"the dtype of 'img' column must to be np.integer or its subdtype,"
+                f"got {df.dtypes['label']}"
+            )
             df["label"] = df["label"].astype(np.int64)
 
         self.mode = mode

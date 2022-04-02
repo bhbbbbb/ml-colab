@@ -1,9 +1,8 @@
-
-from argparse import Namespace
 import os
 import torch
+from .base import NamespaceDict
 
-class Config(Namespace):
+class Config(NamespaceDict):
 
     # device
     DEVICE = torch.device("cuda:0")
@@ -28,7 +27,7 @@ class Config(Namespace):
     #      0 for not save until finish
     EPOCHS_PER_CHECKPOINT: int = 0
 
-    # dir for saving checkpoints
+    # dir for saving checkpoints and log files
     LOG_DIR: str = "log"
 
     EARLY_STOPPING: bool = False
@@ -45,18 +44,12 @@ class Config(Namespace):
         self._check_implementation("NUM_CLASS")
         return
 
-    def __iter__(self):
-        for a_dir in dir(self):
-            if not a_dir.startswith("__") and not callable(getattr(self, a_dir)):
-                yield a_dir, getattr(self, a_dir)
-
     def _check_implementation(self, name: str):
         assert hasattr(self, name), f"attribute: {name} must be specified or overrided"
         return
     
     def display(self):
         print("Configuration:")
-        for a_dir in dir(self):
-            if not a_dir.startswith("__") and not callable(getattr(self, a_dir)):
-                print("{:30} {}".format(a_dir, getattr(self, a_dir)))
+        for attr, value in dict(self):
+            print("{:30} {}".format(attr, value))
         print("\n")
