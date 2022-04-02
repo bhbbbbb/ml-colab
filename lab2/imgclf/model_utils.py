@@ -222,6 +222,35 @@ class ModelUtils:
         return new
 
     @classmethod
+    def load_last_checkpoint_from_dir(cls, model: nn.Module, config: Config,
+                                    dir_path: str, optimizer: Optimizer = None):
+
+        PATTERN = r".+?_epoch_(\d+)"
+        max_epoch = 0
+        max_idx = 0
+        save_list = os.listdir(dir_path)
+        for idx, save in enumerate(save_list):
+            match = re.match(PATTERN, save)
+            if match:
+                epoch = int(match.group(1))
+                if epoch > max_epoch:
+                    max_epoch = epoch
+                    max_idx = idx
+        
+
+        last_save = save_list[max_idx]
+
+        last_save_path = os.path.join(dir_path, last_save)
+        print(f"Try loading: {last_save_path}")
+
+        return cls.load_checkpoint(
+            model,
+            checkpoint_path=last_save_path,
+            config=config,
+            optimizer=optimizer,
+        )
+
+    @classmethod
     def load_last_checkpoint(cls, model: nn.Module, config: Config, optimizer: Optimizer = None):
 
         TIME_FORMAT_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}"
@@ -247,28 +276,9 @@ class ModelUtils:
 
         last_train_root = max(arr)
         last_train_root = os.path.join(config.LOG_DIR, last_train_root)
-
-        PATTERN = r".+?_epoch_(\d+)"
-        max_epoch = 0
-        max_idx = 0
-        save_list = os.listdir(last_train_root)
-        for idx, save in enumerate(save_list):
-            match = re.match(PATTERN, save)
-            if match:
-                epoch = int(match.group(1))
-                if epoch > max_epoch:
-                    max_epoch = epoch
-                    max_idx = idx
-        
-
-        last_save = save_list[max_idx]
-
-        last_save_path = os.path.join(last_train_root, last_save)
-        print(f"Try loading: {last_save_path}")
-
-        return cls.load_checkpoint(
+        return cls.load_last_checkpoint_from_dir(
             model,
-            checkpoint_path=last_save_path,
+            dir_path=last_train_root,
             config=config,
             optimizer=optimizer,
         )
