@@ -13,6 +13,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.optim import Optimizer
 import pandas as pd
 import numpy as np
 
@@ -86,15 +87,10 @@ class HistoryUtils:
     def __init__(self, root: str, path: str = None, history: History = None):
         self.root = root
         root_name = os.path.dirname(root)
-        if path is None:
-            self.path = os.path.join(root, f"{root_name}_history.json")
-        else:
-            self.path = path
+        
+        self.path = path or os.path.join(root, f"{root_name}_history.json")
 
-        if history is None:
-            self.history = History(root=root, history=[], checkpoints={})
-        else:
-            self.history = history
+        self.history = history or History(root=root, history=[], checkpoints={})
         return
 
     @classmethod
@@ -178,13 +174,13 @@ class ModelUtils:
     history: History
     logger: Logger # TODO make some msg print to log
 
-    def __init__(self, model: nn.Module, config: Config):
+    def __init__(self, model: nn.Module, config: Config, optimizer: Optimizer = None):
 
         self.model = model
         self.model.to(config.DEVICE)
         self.config = config
 
-        self.optimizer = torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
+        self.optimizer = optimizer or torch.optim.Adam(model.parameters(), lr=config.LEARNING_RATE)
         self.criterion = torch.nn.CrossEntropyLoss()
         self.start_epoch = 0
 
@@ -196,7 +192,8 @@ class ModelUtils:
         return
 
     @classmethod
-    def load_checkpoint(cls, model: nn.Module, checkpoint_path: str, config: Config):
+    def load_checkpoint(cls, model: nn.Module, checkpoint_path: str,
+                        config: Config, optimizer: Optimizer = None):
         """init ModelUtils class with the saved model (or checkpoint)
 
         Args:
@@ -211,7 +208,7 @@ class ModelUtils:
         tem = torch.load(checkpoint_path)
         checkpoint = ModelStates(**tem)
 
-        new = ModelUtils(model, config)
+        new = ModelUtils(model, config, optimizer)
 
         new.model.load_state_dict(checkpoint.model_state_dict)
         new.optimizer.load_state_dict(checkpoint.optimizer_state_dict)
@@ -225,7 +222,7 @@ class ModelUtils:
         return new
 
     @classmethod
-    def load_last_checkpoint(cls, model: nn.Module, config: Config):
+    def load_last_checkpoint(cls, model: nn.Module, config: Config, optimizer: Optimizer = None):
 
         TIME_FORMAT_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}"
         def is_timeformatted_not_empty(name: str) -> bool:
@@ -269,7 +266,12 @@ class ModelUtils:
         last_save_path = os.path.join(last_train_root, last_save)
         print(f"Try loading: {last_save_path}")
 
-        return cls.load_checkpoint(model, checkpoint_path=last_save_path, config=config)
+        return cls.load_checkpoint(
+            model,
+            checkpoint_path=last_save_path,
+            config=config,
+            optimizer=optimizer,
+        )
             
 
 
@@ -439,8 +441,7 @@ class ModelUtils:
             df (pd.DataFrame): {"label": [...], "confidence"?: [...]}
         """
 
-        if categories is None:
-            categories = list(range(self.config.NUM_CLASS))
+        categories = categories or list(range(self.config.NUM_CLASS))
         
         def mapping(x):
             return categories[x]
