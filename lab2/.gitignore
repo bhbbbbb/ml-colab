@@ -5,6 +5,8 @@ homework2_Dataset
 
 *.csv
 
+*.egg-info
+
 **/pretrained_weight
 
 **/test.py

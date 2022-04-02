@@ -1,5 +1,6 @@
 # required before pythonV3.10
 from __future__ import annotations
+from typing import Tuple
 
 try:
     from typing import Literal
@@ -12,7 +13,6 @@ from torch.utils.data import Dataset as TorchDataset
 import pandas as pd
 import numpy as np
 from PIL import Image
-from typing import Tuple
 from sklearn.model_selection import train_test_split
 from .config import Config
 
@@ -51,7 +51,9 @@ class Dataset(TorchDataset):
         assert "img" in df.columns
 
         if mode != "inference":
-            assert np.issubdtype(df.dtypes["label"], np.integer), f"the dtype of 'img' column must to be np.integer or its subdtype, got {df.dtypes['label']}"
+            assert np.issubdtype(df.dtypes["label"], np.integer),\
+                f"the dtype of 'img' column must to be np.integer or its subdtype,\
+                got {df.dtypes['label']}"
             df["label"] = df["label"].astype(np.int64)
 
         self.mode = mode
@@ -70,7 +72,7 @@ class Dataset(TorchDataset):
         df: pd.DataFrame,
         split_ratio: Tuple[float, float],
         config: Config,
-        transforms: Tuple[transforms.Compose, transforms.Compose] = None,
+        transforms_f: Tuple[transforms.Compose, transforms.Compose] = None,
         ):
         """get dataset by split then with given ratio
 
@@ -82,7 +84,8 @@ class Dataset(TorchDataset):
                 would be split for test.
         """
         sumation = sum(split_ratio)
-        assert sumation <= 1.0, f"the sumation of split_ratio is expected to be <= 1, got {sumation}"
+        assert sumation <= 1.0,\
+            f"the sumation of split_ratio is expected to be <= 1, got {sumation}"
 
         tem_dataset = cls(df, config=config)
         train_set_size = int(len(tem_dataset) * split_ratio[0])
@@ -96,12 +99,12 @@ class Dataset(TorchDataset):
         valid_df, test_df = train_test_split(eval_df, train_size=valid_set_size,
                             shuffle=True, random_state=seed)
         
-        if transforms is None: # use default transform
-            transforms = (None, None)
+        if transforms_f is None: # use default transform
+            transforms_f = (None, None)
         return (
-            cls(train_df, config=config, mode="train", transform=transforms[0]),
-            cls(valid_df, config=config, mode="eval", transform=transforms[1]),
-            cls(test_df, config=config, mode="eval", transform=transforms[1]),
+            cls(train_df, config=config, mode="train", transform=transforms_f[0]),
+            cls(valid_df, config=config, mode="eval", transform=transforms_f[1]),
+            cls(test_df, config=config, mode="eval", transform=transforms_f[1]),
         )
 
     def __getitem__(self, index):
@@ -131,8 +134,10 @@ class Dataset(TorchDataset):
 
     @property
     def data_loader(self):
-        if self.mode == "inference": mode = "eval"
-        else: mode = self.mode
+        if self.mode == "inference":
+            mode = "eval"
+        else:
+            mode = self.mode
         return DataLoader(
             self,
             batch_size = self.config.BATCH_SIZE[mode],

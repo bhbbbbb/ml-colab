@@ -1,19 +1,23 @@
-import re
-from .config import Config
-from .dataset import Dataset
-import torch.nn as nn
-from torch import Tensor
-from typing import Dict, List, Tuple
+import os
 try:
     from typing import TypedDict
 except ImportError: # for python < 3.8
     from typing_extensions import TypedDict
-
+from typing import List, Tuple
+import re
+import json
+from datetime import datetime
 from argparse import Namespace
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 import torch
-import os
-import json
+import torch.nn as nn
+from torch import Tensor
+import pandas as pd
+import numpy as np
+
+from .config import Config
+from .dataset import Dataset
 
 class Stat:
     train_loss: float
@@ -130,8 +134,6 @@ class ModelUtils:
     @classmethod
     def load_last_checkpoint(cls, model: nn.Module, config: Config):
 
-        import re
-
         TIME_FORMAT_PATTERN = r"^\d{8}T\d{2}-\d{2}-\d{2}"
         def is_timeformatted_not_empty(name: str) -> bool:
             """check whether a name of dir is start with formatted time and not empty
@@ -148,8 +150,7 @@ class ModelUtils:
             if len(os.listdir(path)) == 0: # if empty
                 os.removedirs(path)
                 return False
-            else:
-                return True
+            return True
 
         arr = [dir_name for dir_name in os.listdir(config.LOG_DIR)
                                             if is_timeformatted_not_empty(dir_name)]
@@ -198,13 +199,22 @@ class ModelUtils:
         return name
     
     def _log(self, stat: Stat) -> str:
+        """log history for the statistics coming from new epoch
+
+        Args:
+            stat (Stat): statistics data
+
+        Returns:
+            str: path to the log file history.json
+        """
 
         self.history["history"].append(vars(stat))
         self.history["root"] = self.root
         os.makedirs(self.root, exist_ok=True)
         name = f"{os.path.basename(self.root)}_history.json"
         path = os.path.join(self.root, name)
-        if not os.path.isdir(self.root): os.makedirs(self.root)
+
+        os.makedirs(self.root, exist_ok=True)
         with open(path, "w") as fout:
             json.dump(self.history, fout, indent=4)
         return path
@@ -290,7 +300,9 @@ class ModelUtils:
             str: json path as the history
         """
 
-        assert epochs > self.start_epoch, f"expect epochs > {self.start_epoch}, got: epochs={epochs}"
+        assert epochs > self.start_epoch,\
+            f"expect epochs > {self.start_epoch}, got: epochs={epochs}"
+        
         trainset, validset, testset = datasets
 
         # counting for early stopping
@@ -312,11 +324,12 @@ class ModelUtils:
                 valid_acc=valid_acc,
             )
             stat.display()
-
             if valid_loss >= min_valid_loss:
                 counter += 1
                 if self.config.EARLY_STOPPING:
-                    print(f"Early stopping counter: {counter} / {self.config.EARLY_STOPPING_THRESHOLD}")
+                    print(f"Early stopping counter:\
+                            {counter} / {self.config.EARLY_STOPPING_THRESHOLD}")
+                    
                     if counter == self.config.EARLY_STOPPING_THRESHOLD:
                         print("Early stopping!")
                         self._save(epoch, stat)
@@ -330,7 +343,10 @@ class ModelUtils:
             if epoch == epochs - 1:
                 self._save(epoch, stat)
             
-            elif self.config.EPOCHS_PER_CHECKPOINT and (epoch + 1) % self.config.EPOCHS_PER_CHECKPOINT == 0:
+            elif (
+                self.config.EPOCHS_PER_CHECKPOINT
+                and (epoch + 1) % self.config.EPOCHS_PER_CHECKPOINT == 0
+            ):
                 self._save(epoch, stat)
 
             if epoch != epochs - 1:
@@ -341,15 +357,13 @@ class ModelUtils:
         stat.test_loss = test_loss
         stat.test_acc = test_acc
         stat.display()
-        path = self._log(stat)
-        return path
+        return self._log(stat)
     
     @staticmethod
     def _plot(title: str, train_data: list, valid_data: list, output_dir: str) -> str:
-        import matplotlib.pyplot as plt
         plt.figure(figsize=(10,5))
-        plt.plot(train_data, label='train')
-        plt.plot(valid_data, label='valid')
+        plt.plot(train_data, label="train")
+        plt.plot(valid_data, label="valid")
         plt.title(title)
         plt.xlabel("epochs")
         plt.legend()
@@ -369,7 +383,6 @@ class ModelUtils:
         Returns:
             str: path to result figure
         """
-        import pandas as pd
         with open(history_path, "r") as fin:
             history: History = json.load(fin)
         
@@ -389,13 +402,10 @@ class ModelUtils:
         """
 
         if categories is None:
-            categories = [i for i in range(self.config.NUM_CLASS)]
+            categories = list(range(self.config.NUM_CLASS))
         
         def mapping(x):
             return categories[x]
-
-        import numpy as np
-        import pandas as pd
 
         label_col = np.empty(len(dataset), dtype=type(categories[0]))
         if confidence:
@@ -428,7 +438,6 @@ class ModelUtils:
         return df
 
 
-from datetime import datetime
 def formatted_now():
     return datetime.now().strftime("%Y%m%dT%H-%M-%S")
 

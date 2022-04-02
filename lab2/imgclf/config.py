@@ -10,11 +10,11 @@ class Config(Namespace):
 
     # config for torch's DataLoader
     NUM_WORKERS = 4
-    PERSISTENT_WORKERS = True if os.name == "nt" and NUM_WORKERS else False
+    PERSISTENT_WORKERS = os.name == "nt" and NUM_WORKERS
 
     # batch sizes
     BATCH_SIZE = {
-        "train": 128, 
+        "train": 128,
         "eval": 256,
     }
 
@@ -44,19 +44,19 @@ class Config(Namespace):
         super().__init__(**kwargs)
         self._check_implementation("NUM_CLASS")
         return
-    
+
     def __iter__(self):
-        for a in dir(self):
-            if not a.startswith("__") and not callable(getattr(self, a)):
-                    yield a, getattr(self, a)
-    
+        for a_dir in dir(self):
+            if not a_dir.startswith("__") and not callable(getattr(self, a_dir)):
+                yield a_dir, getattr(self, a_dir)
+
     def _check_implementation(self, name: str):
         assert hasattr(self, name), f"attribute: {name} must be specified or overrided"
         return
     
     def display(self):
         print("Configuration:")
-        for a in dir(self):
-            if not a.startswith("__") and not callable(getattr(self, a)):
-                    print("{:30} {}".format(a, getattr(self, a)))
+        for a_dir in dir(self):
+            if not a_dir.startswith("__") and not callable(getattr(self, a_dir)):
+                print("{:30} {}".format(a_dir, getattr(self, a_dir)))
         print("\n")
