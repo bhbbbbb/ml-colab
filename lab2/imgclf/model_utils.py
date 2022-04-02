@@ -28,8 +28,11 @@ class Stat:
     valid_acc: float
     test_loss: float
     test_acc: float
+    epoch: int
 
-    def __init__(self, train_loss: float, valid_loss: float, train_acc: float, valid_acc: float):
+    def __init__(self, epoch: int, train_loss: float, valid_loss: float,
+                train_acc: float, valid_acc: float):
+        self.epoch = epoch
         self.train_loss = train_loss
         self.valid_loss = valid_loss
         self.train_acc = train_acc
@@ -383,6 +386,7 @@ class ModelUtils:
             valid_loss, valid_acc = self._eval_epoch(validset)
 
             stat = Stat(
+                epoch=epoch + 1,
                 train_loss=train_loss,
                 train_acc=train_acc,
                 valid_loss=valid_loss,
