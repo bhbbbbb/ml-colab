@@ -7,8 +7,9 @@ from tqdm import tqdm
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
-# from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
-from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+from .model import MyNfnet
+# from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
 from imgclf.dataset import Dataset
 from .config import NfnetConfig
 
@@ -63,7 +64,7 @@ class NfnetModelUtils(BaseModelUtils):
     
     @staticmethod
     def init_model(config: NfnetConfig):
-        model = NFNet(
+        model = MyNfnet(
             num_classes = config.num_class,
             variant = config["variant"], 
             stochdepth_rate=config["stochdepth_rate"], 
@@ -78,7 +79,9 @@ class NfnetModelUtils(BaseModelUtils):
 
         pretrained_model = pretrained_nfnet(pretrained_path)
         model = cls.init_model(config)
-        model.load_state_dict(pretrained_model.state_dict())
+        model_state = pretrained_model.state_dict()
+        model_state = MyNfnet.fix_output_layer(model_state, config.num_class)
+        model.load_state_dict(model_state)
         model, optimizer = cls._inti_model_optimizer(model, config)
 
         return super().start_new_training(model, config, optimizer)
