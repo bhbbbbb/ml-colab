@@ -31,3 +31,5 @@ class NfnetConfig(Config):
 
     do_clip = True         # Enable adaptive gradient clipping
     clipping = 0.1         # Adaptive gradient clipping parameter
+
+    epochs_per_checkpoint: int = 1
