@@ -5,8 +5,10 @@ from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in
 
 class MyNfnet(NFNet):
     def __init__(self, **kwargs):
+        num_classes = kwargs["num_classes"] 
+        kwargs["num_classes"] = 1000
         super().__init__(**kwargs)
-        self.fc = nn.Linear(1000, kwargs["num_classes"])
+        self.fc = nn.Linear(1000, num_classes)
         return
 
     def forward(self, x):
