@@ -1,4 +1,5 @@
 import re
+from io import StringIO
 import torch.nn as nn
 import torch
 from .config import ModelConfig
@@ -24,7 +25,7 @@ class _BaseNN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.seq(x)
     
-    def summary(self) -> str:
+    def summary(self, file) -> str:
         def prod(arr: list) -> int:
             res = 1
             for a in arr:
@@ -33,20 +34,24 @@ class _BaseNN(nn.Module):
         
         sum_params = 0
         layers_name = "Layer's name"
-        print(f"{layers_name:25}\t{'Size':<30}\t{'Num of params':>12}")
+        sio = StringIO()
+        sio.write(f"{layers_name:25}\t{'Size':<30}\t{'Num of params':>12}\n")
         for name, param in self.named_parameters():
-            print(f"{name :25}\t{str(param.size()):<30}\t{prod(param.size()):>12}")
+            sio.write(f"{name :25}\t{str(param.size()):<30}\t{prod(param.size()):>12}\n")
             sum_params += prod(param.size())
-        print("--------------------------------------------------------")
+        sio.write("--------------------------------------------------------\n")
 
-        print(f"total params: {sum_params}", end="")
+        sio.write(f"total params: {sum_params}")
         if int(sum_params / 1e9):
-            print(f" = {sum_params / 1e9:.2}G")
+            sio.write(f" = {sum_params / 1e9:.2}G")
         elif int(sum_params / 1e6):
-            print(f" = {sum_params / 1e6:.2}M")
+            sio.write(f" = {sum_params / 1e6:.2}M")
         elif int(sum_params / 1e3):
-            print(f" = {sum_params / 1e3:.2}K")
-        print("")
+            sio.write(f" = {sum_params / 1e3:.2}K")
+        sio.write("\n\n")
+        print(sio.getvalue(), file=file)
+        sio.close()
+        return
 
 class FatLeNet5(_BaseNN):
     def __init__(self, config: ModelConfig,

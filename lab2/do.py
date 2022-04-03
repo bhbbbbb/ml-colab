@@ -15,7 +15,7 @@ TEST_CSV      = os.path.join(DATASET_ROOT, "test.csv")
 def train(config, model, epochs):
     df, cat = DatasetUtils.load_csv(TRAIN_CSV, TRAIN_DATASET)
     datasets = Dataset.split(df, split_ratio=[0.7, 0.15], config=config)
-    utils = ModelUtils(model=model, config=config)
+    utils = ModelUtils.start_new_training(model=model, config=config)
     utils.train(epochs, *datasets)
     utils.plot_history()
 
@@ -63,13 +63,13 @@ def main():
     config.batch_size["eval"] = 32
 
     config.early_stopping_threshold = 20
-    # config.learning_rate = 
+    config.learning_rate *= 0.5 
     config.epochs_per_checkpoint = 20
     config.dropout_rate = 0.3
     config.display()
     model = FatLeNet5(config)
     # train(config, model, 50)
-    train(config, model, 50)
+    retrain(config, model, 100)
     # pretrained_nfnet()
     
 
