@@ -7,10 +7,9 @@ from tqdm import tqdm
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
-# from imgclf.nfnets import SGD_AGC, pretrained_nfnet # pylint: disable=no-name-in-module
-from nfnets import SGD_AGC, pretrained_nfnet # pylint: disable=no-name-in-module
+# from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
 from imgclf.dataset import Dataset
-from imgclf.nfnets.nfnets.model import NFNet
 from .config import NfnetConfig
 
 class NfnetModelUtils(BaseModelUtils):
