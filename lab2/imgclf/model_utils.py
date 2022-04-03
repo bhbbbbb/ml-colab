@@ -86,7 +86,7 @@ class HistoryUtils:
 
     def __init__(self, root: str, path: str = None, history: History = None):
         self.root = root
-        root_name = os.path.dirname(root)
+        root_name = os.path.basename(root)
         
         self.path = path or os.path.join(root, f"{root_name}_history.json")
 
@@ -125,7 +125,6 @@ class HistoryUtils:
         """
         self.history["history"].append(vars(stat))
         self.history["root"] = self.root
-        os.makedirs(self.root, exist_ok=True)
 
         os.makedirs(self.root, exist_ok=True)
         with open(self.path, "w") as fout:
