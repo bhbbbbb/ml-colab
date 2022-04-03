@@ -1,7 +1,7 @@
 import re
 import torch.nn as nn
 import torch
-from .model_config import ModelConfig
+from .config import ModelConfig
 
 
 class _BaseNN(nn.Module):

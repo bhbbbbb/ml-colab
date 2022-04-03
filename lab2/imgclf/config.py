@@ -1,44 +1,38 @@
 import os
 import torch
-from .base import BaseConfig
-from .models import ModelConfig
+from .models.config import ModelConfig
+from .dataset.config import DatasetConfig
+from .base.model_utils.config import ModelUtilsConfig
 
-class Config(BaseConfig):
+class Config(ModelConfig, DatasetConfig, ModelUtilsConfig):
 
+    ## ------------- ModelUtilsConfig ---------------------------
     # device
-    DEVICE = torch.device("cuda:0")
+    device = torch.device("cuda:0")
 
-    # config for torch's DataLoader
-    NUM_WORKERS = 4
-    PERSISTENT_WORKERS = os.name == "nt" and NUM_WORKERS
-
-    # batch sizes
-    BATCH_SIZE = {
-        "train": 128,
-        "eval": 256,
-    }
-
-    # IMAGE_SHAPE = (224, 224)
-
-    LEARNING_RATE = 0.001
-
+    learning_rate = 0.001
 
     # num of epochs per checkpoints
     # e.g. 1 stand for save model every epoch
     #      0 for not save until finish
-    EPOCHS_PER_CHECKPOINT: int = 0
+    epochs_per_checkpoint: int = 0
 
     # dir for saving checkpoints and log files
-    LOG_DIR: str = "log"
+    log_dir: str = "log"
 
-    EARLY_STOPPING: bool = False
+    early_stopping: bool = False
 
     # only matter when EARLY_STOPPING is set to True
-    EARLY_STOPPING_THRESHOLD: int = 10
+    early_stopping_threshold: int = 10
 
-    MODEL_CONFIG: ModelConfig = ModelConfig()
+    ## ------------- DatasetConfig ---------------------------
 
+    # config for torch's DataLoader
+    num_workers = 4
+    persistent_workers = os.name == "nt" and bool(num_workers)
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        return
+    # batch sizes
+    batch_size = {
+        "train": 128,
+        "eval": 256,
+    }

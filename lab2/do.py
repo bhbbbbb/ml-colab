@@ -16,14 +16,14 @@ def train(config, model, epochs):
     df, cat = DatasetUtils.load_csv(TRAIN_CSV, TRAIN_DATASET)
     datasets = Dataset.split(df, split_ratio=[0.7, 0.15], config=config)
     utils = ModelUtils(model=model, config=config)
-    utils.train(datasets, epochs=epochs)
+    utils.train(epochs, *datasets)
     utils.plot_history()
 
 def train_from(config, model, epochs, checkpoint_path):
     df, cat = DatasetUtils.load_csv(TRAIN_CSV, TRAIN_DATASET)
     datasets = Dataset.split(df, split_ratio=[0.7, 0.15], config=config)
     utils = ModelUtils.load_checkpoint(model=model, config=config, checkpoint_path=checkpoint_path)
-    utils.train(datasets, epochs=epochs)
+    utils.train(epochs, *datasets)
     utils.plot_history()
     return
 
@@ -31,7 +31,7 @@ def retrain(config, model, epochs):
     df, cat = DatasetUtils.load_csv(TRAIN_CSV, TRAIN_DATASET)
     datasets = Dataset.split(df, split_ratio=[0.7, 0.15], config=config)
     utils = ModelUtils.load_last_checkpoint(model=model, config=config)
-    utils.train(datasets, epochs=epochs)
+    utils.train(epochs, *datasets)
     utils.plot_history()
     return
 
@@ -59,19 +59,17 @@ def main():
     assert torch.cuda.is_available()
 
     config = Hw2Config()
-    config.BATCH_SIZE["train"] = 32
-    config.BATCH_SIZE["eval"] = 16
+    config.batch_size["train"] = 64
+    config.batch_size["eval"] = 32
 
-    config.EARLY_STOPPING_THRESHOLD = 30
-    config.LEARNING_RATE *= 10
-    config.EPOCHS_PER_CHECKPOINT = 20
-    config.MODEL_CONFIG.dropout_rate = 0.3
+    config.early_stopping_threshold = 20
+    # config.learning_rate = 
+    config.epochs_per_checkpoint = 20
+    config.dropout_rate = 0.3
     config.display()
-    model = FakeVGG16(config.MODEL_CONFIG)
+    model = FatLeNet5(config)
     # train(config, model, 50)
-    utils = ModelUtils.load_last_checkpoint(model, config)
-    utils.plot_history()
-    # retrain(config, FatLeNet5(config), 105)
+    train(config, model, 50)
     # pretrained_nfnet()
     
 

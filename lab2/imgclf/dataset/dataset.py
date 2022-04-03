@@ -8,14 +8,14 @@ except ImportError:
     from typing_extensions import Literal
 
 from torchvision import transforms
+from torchvision.transforms import InterpolationMode
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
-from torchvision.transforms import InterpolationMode
 import pandas as pd
 import numpy as np
 from PIL import Image
 from sklearn.model_selection import train_test_split
-from .config import Config
+from .config import DatasetConfig
 
 
 class Dataset(TorchDataset):
@@ -31,7 +31,7 @@ class Dataset(TorchDataset):
         transforms.ToTensor(),
     ])
     
-    def __init__(self, df: pd.DataFrame, config: Config,
+    def __init__(self, df: pd.DataFrame, config: DatasetConfig,
         mode: Literal["train", "eval", "inference"] = "train",
         transform: transforms.Compose = None):
         """
@@ -70,11 +70,11 @@ class Dataset(TorchDataset):
     
     @classmethod
     def split(
-        cls,
-        df: pd.DataFrame,
-        split_ratio: Tuple[float, float],
-        config: Config,
-        transforms_f: Tuple[transforms.Compose, transforms.Compose] = None,
+            cls,
+            df: pd.DataFrame,
+            split_ratio: Tuple[float, float],
+            config: DatasetConfig,
+            transforms_f: Tuple[transforms.Compose, transforms.Compose] = None,
         ):
         """get dataset by split then with given ratio
 
@@ -142,8 +142,8 @@ class Dataset(TorchDataset):
             mode = self.mode
         return DataLoader(
             self,
-            batch_size = self.config.BATCH_SIZE[mode],
+            batch_size = self.config.batch_size[mode],
             shuffle = self.mode == "train",
-            num_workers = self.config.NUM_WORKERS,
-            persistent_workers= self.config.PERSISTENT_WORKERS,
+            num_workers = self.config.num_workers,
+            persistent_workers= self.config.persistent_workers,
         )
