@@ -160,7 +160,7 @@ class NfnetModelUtils(BaseModelUtils):
 
         correct_labels = 0
         eval_loss = 0.0
-        for inputs, targets in eval_dataset:
+        for inputs, targets in eval_dataset.data_loader:
             with torch.no_grad():
                 inputs: Tensor = inputs.to(self.config.device)
                 targets: Tensor = targets.to(self.config.device)
