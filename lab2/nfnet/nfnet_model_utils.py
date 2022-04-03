@@ -7,9 +7,9 @@ from tqdm import tqdm
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
-from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+# from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
 from .model import MyNfnet
-# from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
 from imgclf.dataset import Dataset
 from .config import NfnetConfig
 
@@ -81,9 +81,9 @@ class NfnetModelUtils(BaseModelUtils):
         model = cls.init_model(config)
         model_state = pretrained_model.state_dict()
         model_state = MyNfnet.fix_output_layer(model_state, config.num_class)
-        for name, params in model_state.items():
-            print(name)
-            print(params.shpae)
+        # for name, params in model_state.items():
+        #     print(name)
+        #     print(params.shape)
         
         model.load_state_dict(model_state)
         model, optimizer = cls._inti_model_optimizer(model, config)
