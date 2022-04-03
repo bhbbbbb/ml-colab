@@ -72,6 +72,7 @@ class NfnetModelUtils(BaseModelUtils):
             se_ratio=config["se_ratio"],
             activation=config["activation"]
         )
+        model.to(config.device)
         return model
     
     @classmethod
