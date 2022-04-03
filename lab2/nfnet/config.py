@@ -4,7 +4,7 @@ class NfnetConfig(Config):
     amp = False        # Enable automatic mixed precision
 
     # Model
-    # variant = 'F0'         # F0 - F7
+    variant = 'F1'         # F0 - F7
     # num_classes = 1000     # Number of classes
     activation = 'gelu'    # or 'relu'
     stochdepth_rate = 0.25 # 0-1, the probability that a layer is dropped during one step
