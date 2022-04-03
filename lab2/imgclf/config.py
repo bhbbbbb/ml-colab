@@ -1,8 +1,9 @@
 import os
 import torch
-from .base import NamespaceDict
+from .base import BaseConfig
+from .models import ModelConfig
 
-class Config(NamespaceDict):
+class Config(BaseConfig):
 
     # device
     DEVICE = torch.device("cuda:0")
@@ -35,21 +36,9 @@ class Config(NamespaceDict):
     # only matter when EARLY_STOPPING is set to True
     EARLY_STOPPING_THRESHOLD: int = 10
 
+    MODEL_CONFIG: ModelConfig = ModelConfig()
 
-    ########## have to be overrided or specified at init ##################
-    NUM_CLASS: int
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._check_implementation("NUM_CLASS")
         return
-
-    def _check_implementation(self, name: str):
-        assert hasattr(self, name), f"attribute: {name} must be specified or overrided"
-        return
-    
-    def display(self):
-        print("Configuration:")
-        for attr, value in dict(self).items():
-            print("{:30} {}".format(attr, value))
-        print("\n")

@@ -1,5 +1,5 @@
 import os
-from imgclf.config import Config
+from imgclf.config import Config, ModelConfig
 
 class Hw2Config(Config):
 
@@ -14,3 +14,5 @@ class Hw2Config(Config):
 
     # only matter when EARLY_STOPPING is set to True
     EARLY_STOPPING_THRESHOLD: int = 20
+
+    MODEL_CONFIG = ModelConfig(num_class = 10)

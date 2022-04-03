@@ -1,7 +1,7 @@
 import re
 import torch.nn as nn
 import torch
-from .config import Config
+from .model_config import ModelConfig
 
 
 class _BaseNN(nn.Module):
@@ -47,32 +47,36 @@ class _BaseNN(nn.Module):
         elif int(sum_params / 1e3):
             print(f" = {sum_params / 1e3:.2}K")
         print("")
-        
 
 class FatLeNet5(_BaseNN):
-    def __init__(self, config: Config, batch_norm: bool = True, dropout: bool = True):
+    def __init__(self, config: ModelConfig,
+                batch_norm: bool = None, dropout_rate: float = None):
         super().__init__()
+        
+        batch_norm = batch_norm or config.batch_norm
+        dropout_rate = dropout_rate or config.dropout_rate
+
         self.seq = nn.Sequential()
 
         self.append(nn.Conv2d(3, 6, kernel_size=5, stride=1))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU(inplace=True))
         if batch_norm:
             self.append(nn.BatchNorm2d(6))
         self.append(nn.AvgPool2d(kernel_size=2, stride=2))
 
         self.append(nn.Conv2d(6, 16, kernel_size=5, stride=1))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU(inplace=True))
         if batch_norm:
             self.append(nn.BatchNorm2d(16))
         self.append(nn.AvgPool2d(kernel_size=2, stride=2))
 
         self.append(nn.Conv2d(16, 120, kernel_size=53))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU(inplace=True))
         if batch_norm:
             self.append(nn.BatchNorm2d(120))
@@ -80,55 +84,59 @@ class FatLeNet5(_BaseNN):
         self.append(nn.Flatten())
 
         self.append(nn.Linear(120, 84))
-        if dropout:
-            self.append(nn.Dropout(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU(inplace=True))
 
-        self.append(nn.Linear(84, config.NUM_CLASS))
+        self.append(nn.Linear(84, config.num_class))
         self.append(nn.Softmax(dim=1))
 
 
 class FakeVGG16(_BaseNN):
-    def __init__(self, config: Config, batch_norm: bool = True, dropout: bool = True):
+    def __init__(self, model_config: ModelConfig,
+                batch_norm: bool = None, dropout_rate: float = None):
         super().__init__()
+
+        batch_norm = batch_norm or model_config.batch_norm
+        dropout_rate = dropout_rate or model_config.dropout_rate
         
         self.seq = nn.Sequential()
 
         self.append(nn.Conv2d(3, 64, kernel_size=3, stride=1, padding="same"))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
         if batch_norm:
             self.append(nn.BatchNorm2d(64))
         self.append(nn.MaxPool2d(kernel_size=2, stride=2)) # 112 x 112
 
         self.append(nn.Conv2d(64, 128, kernel_size=3, stride=1, padding="same"))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
         if batch_norm:
             self.append(nn.BatchNorm2d(128))
         self.append(nn.MaxPool2d(kernel_size=2, stride=2)) # 56 x 56
 
         self.append(nn.Conv2d(128, 256, kernel_size=3, stride=1, padding="same"))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
         if batch_norm:
             self.append(nn.BatchNorm2d(256))
         self.append(nn.MaxPool2d(kernel_size=2, stride=2)) # 28 x 28
 
         self.append(nn.Conv2d(256, 512, kernel_size=3, stride=1, padding="same"))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
         if batch_norm:
             self.append(nn.BatchNorm2d(512))
         self.append(nn.MaxPool2d(kernel_size=2, stride=2)) # 14 x 14
 
         self.append(nn.Conv2d(512, 512, kernel_size=3, stride=1, padding="same"))
-        if dropout:
-            self.append(nn.Dropout2d(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout2d(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
         if batch_norm:
             self.append(nn.BatchNorm2d(512))
@@ -137,16 +145,16 @@ class FakeVGG16(_BaseNN):
         self.append(nn.Flatten())
 
         self.append(nn.Linear(512, 512))
-        if dropout:
-            self.append(nn.Dropout(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
 
         self.append(nn.Linear(512, 128))
-        if dropout:
-            self.append(nn.Dropout(inplace=True))
+        if dropout_rate:
+            self.append(nn.Dropout(p=dropout_rate, inplace=True))
         self.append(nn.ReLU())
 
-        self.append(nn.Linear(128, config.NUM_CLASS))
+        self.append(nn.Linear(128, model_config.num_class))
         self.append(nn.Softmax(dim=1))
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:
