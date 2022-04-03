@@ -3,8 +3,8 @@ python utils.py --log="/path/to/log/root"
 """
 import os
 from typing import Tuple
-from dataset import Dataset
-from mlp import MLP
+# from dataset import Dataset
+from mlp import Model, ModelStates
 import torch
 import argparse
 
@@ -14,7 +14,6 @@ layers_list = [1, 2, 4, 8, 16]
 
 
 def generate_markdown_tables(log_root: str) -> list:
-    loader = Loader(log_root)
     neurons_list_str = [str(i) for i in neurons_list]
     tables = []
     loss_tables = []
@@ -41,7 +40,7 @@ def generate_markdown_tables(log_root: str) -> list:
             table_loss += f"| {layers} | "
 
             for neurons in neurons_list:
-                accuracy, loss = loader.load(layers, neurons, epochs)
+                accuracy, loss = load(log_root, layers, neurons, learning_rate=0.001, epoch=epochs)
                 table += f" {accuracy: .2f}% |"
                 table_loss += f" {loss: .3f} |"
 
@@ -54,52 +53,105 @@ def generate_markdown_tables(log_root: str) -> list:
     tables += loss_tables
     return tables
 
-class Loader:
-    log_root: str
+def generate_cool_tables(log_root: str, checkpoints=epochs_list, eta: float = 0.001, enlarge_coef: int = 0) -> list:
+    neurons_list_str = [str(i) for i in neurons_list]
+    
+    if not enlarge_coef:
+        enlarge_coef = 64 // checkpoints[-1]
+    # ---------------------- row 1 --------------------
+    table = f"| Epoch: 1~{checkpoints[-1]} | "
+    table += " | ".join(neurons_list_str)
+    table += " |\n"
 
-    def __init__(self, log_root):
-        self.log_root = log_root
-        _, self.test_loader = Dataset().load()
-        return
+    # ---------------------- row 2 --------------------
+    table += "|"
+    for i in range(len(neurons_list) + 1):
+        table += " -: |"
+    
+    table += "\n"
 
-    def load(self, layers, neurons, epochs) -> Tuple[float, float]:
-        """
+    # ---------------------- row 3~ --------------------
+    for layers in layers_list:
+        table += f"| {layers} | "
 
-        Args:
-            layers (_type_): _description_
-            neurons (_type_): _description_
-            epochs (_type_): _description_
+        for neurons in neurons_list:
+            last_epoch = 0
+            acc = []
+            for epochs in checkpoints:
+                accuracy, loss = load(log_root, layers, neurons, learning_rate=eta, epoch=epochs)
+                width = epochs - last_epoch
+                last_epoch = epochs
+                acc.append((width, accuracy))
 
-        Returns:
-            Tuple[float, float]: accuracy, loss
-        """
-        log_sub_dir = f"l{layers}_n{neurons}"
-        log_sub_dir = os.path.abspath(os.path.join(self.log_root, log_sub_dir))
+            table += f" {get_html_color_box(acc, enlarge_coef)} |"
 
-        assert os.path.isdir(log_sub_dir)
+        table += "\n"
+    
+    print(table)
+    return table
 
-        model_name = f"l{layers}_n{neurons}_e{epochs}_of_16"
+from typing import List, Tuple
+from math import floor
+def get_html_color_box(acc: List[Tuple[int, float]], enlarge_coef:int = 1) -> str:
+    """_summary_
 
-        model_path = os.path.join(log_sub_dir, model_name)
+    Args:
+        width (int): _description_
+        acc (List[Tuple[int, float]]): [ (width, accuracy),... ]
 
-        assert os.path.isfile(model_path)
+    Returns:
+        str: html code
+    """
+    html = '<div style="display: inline-flex;">'
+    BASE = 5
+    for width, accuracy in acc:
+        if accuracy < 10.0: accuracy = 10.0
+        red = (100 - accuracy) / 90 # map to 0 ~ 1
+        red = (BASE ** (-1 * red) - 1) / (BASE ** (-1) - 1) 
+        red = floor(255 * red)
+        # green = 255 * (accuracy - 10) // 90
+        color = f"rgb({red},255,0)"
+        html += f'<div style="width: {width * enlarge_coef}px; height: 10px; background-color: {color};"></div>'
 
-        model = torch.load(model_path)
-        model = MLP(**model)
+    html += '</div>'
+    return html
 
-        return model.start_eval(self.test_loader)
+def load(log_root, layers, neurons, learning_rate, epoch) -> Tuple[float, float]:
+    """
+    Returns:
+        Tuple[float, float]: accuracy, loss
+    """
+    log_sub_dir = f"l{layers}_n{neurons}_eta{learning_rate}"
+    log_sub_dir = os.path.abspath(os.path.join(log_root, log_sub_dir))
+
+    assert os.path.isdir(log_sub_dir)
+
+    model_name = f"epoch_{epoch}"
+
+    model_path = os.path.join(log_sub_dir, model_name)
+
+    assert os.path.isfile(model_path)
+
+    model: Model = torch.load(model_path)
+    states: ModelStates = model["model_states"]
+    return states["val_acc"], states["loss"]
+
 
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--log", required=True, metavar="/path/to/log/root/")
+    # parser.add_argument("--eta", required=True, metavar="1e-5")
 
     args = parser.parse_args()
     
-    with open(os.path.join("..", "tables.txt"), "w") as fin:
-        tables = generate_markdown_tables(args.log)
-        tables = "\n".join(tables)
-        fin.write(tables)
+    # table = generate_cool_tables(args.log, checkpoints=(epochs_list), eta=0.001)
+    table = generate_cool_tables(args.log, checkpoints=(epochs_list + [(i*8) for i in range(3, 256//8 + 1)]),
+                eta=1e-5, enlarge_coef=1)
+    # with open(os.path.join("..", "tables.txt"), "w") as fin:
+    #     tables = generate_markdown_tables(args.log)
+    #     tables = "\n".join(tables)
+    #     fin.write(tables)
 
 

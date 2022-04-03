@@ -1,0 +1,13 @@
+homework2_Dataset
+
+**/log
+
+
+*.csv
+
+*.egg-info
+
+**/pretrained_weight
+
+**/test.py
+lab2.py
