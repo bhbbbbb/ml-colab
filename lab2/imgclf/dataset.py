@@ -10,6 +10,7 @@ except ImportError:
 from torchvision import transforms
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset as TorchDataset
+from torchvision.transforms import InterpolationMode
 import pandas as pd
 import numpy as np
 from PIL import Image
@@ -21,12 +22,12 @@ class Dataset(TorchDataset):
     """Dataset for image classification task"""
 
     TRAIN_TRANSFORM = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224), InterpolationMode.BICUBIC),
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
     ])
     EVAL_TRANSFORM = transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((224, 224), InterpolationMode.BICUBIC),
         transforms.ToTensor(),
     ])
     
