@@ -141,6 +141,7 @@ class NfnetModelUtils(BaseModelUtils):
             self.scaler.update()
 
             running_loss += loss.item() * inputs.size(0)
+            print(running_loss)
             _, predicted = torch.max(output, 1)
             correct_labels += (predicted == targets).sum().item()
 
@@ -160,7 +161,7 @@ class NfnetModelUtils(BaseModelUtils):
 
         correct_labels = 0
         eval_loss = 0.0
-        for inputs, targets in eval_dataset.data_loader:
+        for inputs, targets in tqdm(eval_dataset.data_loader):
             with torch.no_grad():
                 inputs: Tensor = inputs.to(self.config.device)
                 targets: Tensor = targets.to(self.config.device)
