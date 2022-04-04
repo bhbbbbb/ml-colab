@@ -96,7 +96,7 @@ class NfnetModelUtils(BaseModelUtils):
                         config: NfnetConfig, optimizer = None):
         assert os.path.isfile(checkpoint_path)
 
-        tem = torch.load(checkpoint_path)
+        tem = torch.load(checkpoint_path, map_location=torch.device(config.device))
         checkpoint = ModelStates(**tem)
 
         model, optimizer = cls._inti_model_optimizer(model, config)
