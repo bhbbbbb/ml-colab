@@ -4,6 +4,7 @@ import torch
 from torch import Tensor
 import torch.cuda.amp as amp
 from tqdm import tqdm
+import numpy as np
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
@@ -122,6 +123,7 @@ class NfnetModelUtils(BaseModelUtils):
         dataloader = train_dataset.data_loader
         running_loss = 0.0
         correct_labels = 0
+        is_nan = False
         for inputs, targets in tqdm(dataloader):
 
             inputs: Tensor = inputs.half().to(self.config.device)\
@@ -142,7 +144,12 @@ class NfnetModelUtils(BaseModelUtils):
             self.scaler.update()
 
             tem = loss.item() * inputs.size(0)
-            print(type(tem), flush=True)
+            if np.isnan(tem):
+                is_nan = True
+                print("nan!")
+            elif is_nan:
+                print("no longer nan")
+                is_nan = False
             running_loss += tem
             _, predicted = torch.max(output, 1)
             correct_labels += (predicted == targets).sum().item()
