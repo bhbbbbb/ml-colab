@@ -147,7 +147,7 @@ class NfnetModelUtils(BaseModelUtils):
             if np.isnan(tem):
                 is_nan = True
                 print("nan!")
-            elif is_nan:
+            elif not is_nan:
                 print("no longer nan")
                 is_nan = False
             running_loss += tem
