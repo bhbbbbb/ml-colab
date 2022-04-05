@@ -8,8 +8,7 @@ import numpy as np
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
-# from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
-from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+from nfnets import SGD_AGC, pretrained_nfnet, NFNet
 from .model import MyNfnet
 from imgclf.dataset import Dataset
 from .config import NfnetConfig

@@ -46,31 +46,37 @@ def inference(config, categories: list, model):
     return df
 
 
-# from imgclf.nfnets import pretrained_nfnet
-# from imgclf.nfnets import NFNet
-# from imgclf.nfnets import SGD_AGC
-
-
-# NFNET_F1_PATH = ""
-# def train_nfnet(config, epochs):
-# 
+def train_nfnet(epochs):
+    from nfnet.nfnet_model_utils import NfnetModelUtils
+    from nfnet.config import NfnetConfig
+    config = NfnetConfig()
+    config.learning_rate = 0.001
+    config.batch_size["train"] = 16
+    config.batch_size["eval"] = 16
+    config.num_workers = 4
+    config.num_class = 10
+    config.display()
+    epochs = 50
+    df, _ = DatasetUtils.load_csv(TRAIN_CSV, TRAIN_DATASET)
+    datasets = Dataset.split(df, split_ratio=[0.7, 0.15], config=config)
+    model = NfnetModelUtils.init_model(config)
+    utils = NfnetModelUtils.load_last_checkpoint(model, config)
+    utils.train(epochs, *datasets)
+    return
 
 def main():
     assert torch.cuda.is_available()
 
-    config = Hw2Config()
-    config.batch_size["train"] = 64
-    config.batch_size["eval"] = 32
+    # config = Hw2Config()
+    # config.batch_size["train"] = 64
+    # config.batch_size["eval"] = 32
 
-    config.early_stopping_threshold = 20
-    config.learning_rate *= 0.5 
-    config.epochs_per_checkpoint = 20
-    config.dropout_rate = 0.3
-    config.display()
-    model = FatLeNet5(config)
-    # train(config, model, 50)
-    retrain(config, model, 100)
-    # pretrained_nfnet()
+    # config.early_stopping_threshold = 20
+    # config.learning_rate *= 0.5 
+    # config.epochs_per_checkpoint = 20
+    # config.dropout_rate = 0.3
+    # config.display()
+    train_nfnet(50)
     
 
 if __name__ == "__main__":
