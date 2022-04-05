@@ -141,8 +141,9 @@ class NfnetModelUtils(BaseModelUtils):
             self.scaler.step(self.optimizer)
             self.scaler.update()
 
-            running_loss += loss.item() * inputs.size(0)
-            print(running_loss)
+            tem = loss.item() * inputs.size(0)
+            print(type(tem), flush=True)
+            running_loss += tem
             _, predicted = torch.max(output, 1)
             correct_labels += (predicted == targets).sum().item()
 
