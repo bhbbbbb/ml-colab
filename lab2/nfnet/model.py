@@ -27,4 +27,3 @@ class MyNfnet(NFNet):
         model_state_dict.move_to_end("fc.weight", last=True)
         model_state_dict.move_to_end("fc.bias", last=True)
         return model_state_dict
-

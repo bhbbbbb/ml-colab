@@ -5,12 +5,12 @@ from torch import Tensor
 import torch.cuda.amp as amp
 from tqdm import tqdm
 import numpy as np
+from nfnets import SGD_AGC, pretrained_nfnet, NFNet
 from imgclf.base.model_utils import BaseModelUtils
 from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
 from imgclf.base.logger import Logger
-from nfnets import SGD_AGC, pretrained_nfnet, NFNet
-from .model import MyNfnet
 from imgclf.dataset import Dataset
+from .model import MyNfnet
 from .config import NfnetConfig
 
 class NfnetModelUtils(BaseModelUtils):
@@ -82,9 +82,6 @@ class NfnetModelUtils(BaseModelUtils):
         model = cls.init_model(config)
         model_state = pretrained_model.state_dict()
         model_state = MyNfnet.fix_output_layer(model_state, config.num_class)
-        # for name, params in model_state.items():
-        #     print(name)
-        #     print(params.shape)
         
         model.load_state_dict(model_state)
         model, optimizer = cls._inti_model_optimizer(model, config)
@@ -100,6 +97,7 @@ class NfnetModelUtils(BaseModelUtils):
         checkpoint = ModelStates(**tem)
 
         model, optimizer = cls._inti_model_optimizer(model, config)
+        model.load_state_dict(checkpoint.model_state_dict)
         optimizer.load_state_dict(checkpoint.optimizer_state_dict)
         
         root = os.path.dirname(checkpoint_path)
@@ -182,6 +180,7 @@ class NfnetModelUtils(BaseModelUtils):
                 _, predicted = torch.max(output, 1)
                 correct_labels += (predicted == targets).sum().item()
 
-        eval_loss = correct_labels / len(eval_dataset)
+        print(predicted)
+        eval_loss = eval_loss / len(eval_dataset)
         eval_acc = correct_labels / len(eval_dataset)
         return eval_loss, eval_acc

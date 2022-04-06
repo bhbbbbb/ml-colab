@@ -13,11 +13,6 @@ class NfnetConfig(Config):
     use_fp16 = False       # Use 16bit floats, which lowers memory footprint. This currently sets
                         # the complete model to FP16 (will be changed to match FP16 ops from paper)
 
-    # Dataset
-    # dataset = '/media/benjs/ext/'  # Dataset root directory
-    # num_workers = 8                # Number of workers in dataloader
-    # pin_memory = True             # This can fasten or slow down data loading depending on your hardware
-
     # Training
     # batch_size = 64        # Batch size
     # epochs = 360           # Number of epochs
