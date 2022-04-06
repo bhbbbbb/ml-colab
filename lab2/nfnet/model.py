@@ -1,7 +1,8 @@
-import torch.nn as nn
+from typing import OrderedDict
 import torch
-# from imgclf.nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
-from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=no-name-in-module
+import torch.nn as nn
+import numpy as np
+from nfnets import NFNet
 
 class MyNfnet(NFNet):
     def __init__(self, **kwargs):
@@ -13,15 +14,16 @@ class MyNfnet(NFNet):
 
     def forward(self, x):
         output = super().forward(x)
-        
         return self.fc(output)
 
     @staticmethod
-    def fix_output_layer(model_state_dict, num_class):
-        fc_weight = torch.randn([num_class, 1000])
-        fc_bias = torch.randn([num_class])
-        model_state_dict["fc.weight"] = fc_weight
-        model_state_dict["fc.bias"] = fc_bias
+    def fix_output_layer(model_state_dict: OrderedDict, num_class):
+
+        fc_weight = np.random.normal(scale=0.01, size=[num_class, 1000])
+        fc_bias = np.random.normal(scale=0.1, size=[num_class])
+
+        model_state_dict["fc.weight"] = torch.tensor(fc_weight, dtype=torch.float32)
+        model_state_dict["fc.bias"] = torch.tensor(fc_bias, dtype=torch.float32)
         model_state_dict.move_to_end("fc.weight", last=True)
         model_state_dict.move_to_end("fc.bias", last=True)
         return model_state_dict
