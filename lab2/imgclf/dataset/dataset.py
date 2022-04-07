@@ -57,6 +57,9 @@ class Dataset(TorchDataset):
                 f"got {df.dtypes['label']}"
             )
             df["label"] = df["label"].astype(np.int64)
+        
+        else:
+            assert len(df.columns) == 1, f"Except only a column in df, got {df.columns}"
 
         self.mode = mode
         self.df = df

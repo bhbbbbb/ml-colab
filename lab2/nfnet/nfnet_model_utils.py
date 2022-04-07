@@ -1,9 +1,11 @@
 from typing import Tuple
 import torch
 from torch import Tensor
-import torch.cuda.amp as amp
+from torch.cuda import amp
+from torch.nn import functional as F
 from tqdm import tqdm
 import numpy as np
+import pandas as pd
 from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=import-error
 from imgclf.base.model_utils.base_model_utils import BaseModelUtils
 from imgclf.dataset import Dataset
@@ -157,3 +159,49 @@ class NfnetModelUtils(BaseModelUtils):
         eval_loss = eval_loss / len(eval_dataset)
         eval_acc = correct_labels / len(eval_dataset)
         return eval_loss, eval_acc
+
+    def inference(self, dataset: Dataset, categories: list = None, confidence: bool = True):
+        """inference for the given test dataset
+
+        Args:
+            confidence (boolean): whether output the `confidence` column. Default to True.
+        
+        Returns:
+            df (pd.DataFrame): {"label": [...], "confidence"?: [...]}
+        """
+
+        categories = categories if categories is not None else list(range(self.config.num_class))
+        
+        def mapping(x):
+            return categories[x]
+
+        label_col = np.empty(len(dataset), dtype=type(categories[0]))
+        if confidence:
+            confidence_col = np.empty(len(dataset), dtype=float)
+            data = {"label": label_col, "confidence": confidence_col}
+        
+        else:
+            data = {"label": label_col}
+        
+        df = pd.DataFrame(data)
+        
+        with torch.inference_mode():
+            for data, indexes in tqdm(dataset.data_loader):
+                data: Tensor
+                indexes: Tensor
+                data = data.to(self.config.device)
+                output: Tensor = self.model(data)
+
+                output = F.softmax(output, dim=1)
+
+                confidences, indices = output.max(dim=1)
+
+                labels = list(map(mapping, indices.tolist()))
+                
+                indexes = indexes.tolist()
+
+                df.loc[indexes, "label"] = labels
+                if confidence:
+                    df.loc[indexes, "confidence"] = confidences.tolist()
+        
+        return df

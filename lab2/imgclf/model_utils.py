@@ -3,6 +3,7 @@ from tqdm import tqdm
 import torch
 from torch import Tensor
 from torch import nn
+from torch.nn import functional as F
 import pandas as pd
 import numpy as np
 
@@ -98,7 +99,7 @@ class ModelUtils(BaseModelUtils):
             df (pd.DataFrame): {"label": [...], "confidence"?: [...]}
         """
 
-        categories = categories or list(range(self.config.num_class))
+        categories = categories if categories is not None else list(range(self.config.num_class))
         
         def mapping(x):
             return categories[x]
@@ -120,15 +121,16 @@ class ModelUtils(BaseModelUtils):
                 data = data.to(self.config.device)
                 output: Tensor = self.model(data)
 
+                output = F.softmax(output, dim=1)
+
                 confidences, indices = output.max(dim=1)
 
                 labels = list(map(mapping, indices.tolist()))
                 
                 indexes = indexes.tolist()
+
+                df.loc[indexes, "label"] = labels
                 if confidence:
-                    df.loc["label", indexes] = labels
-                    df.loc["confidence", indexes] = confidences.tolist()
-                else:
-                    df.iloc[indexes] = labels
+                    df.loc[indexes, "confidence"] = confidences.tolist()
         
         return df
