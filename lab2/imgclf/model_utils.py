@@ -2,15 +2,23 @@ from typing import Tuple
 from tqdm import tqdm
 import torch
 from torch import Tensor
+import torch.nn as nn
 import pandas as pd
 import numpy as np
 
-# from .config import Config
 from .dataset import Dataset
 from .base.model_utils import BaseModelUtils 
 
 
 class ModelUtils(BaseModelUtils):
+
+    @staticmethod
+    def _get_optimizer(model, config):
+        return torch.optim.Adam(model.parameters(), lr=config.learning_rate)
+    
+    @staticmethod
+    def _get_criterion(config):
+        return nn.CrossEntropyLoss()
 
     def _train_epoch(self, train_dataset: Dataset) -> Tuple[float, float]:
         """train a single epoch

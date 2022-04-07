@@ -2,7 +2,7 @@ from typing import OrderedDict
 import torch
 import torch.nn as nn
 import numpy as np
-from nfnets import NFNet
+from nfnets import NFNet # pylint: disable=import-error
 
 class MyNfnet(NFNet):
     def __init__(self, **kwargs):

@@ -1,47 +1,59 @@
 import os
 import torch
-from torch.optim import Adam
 from .models.config import ModelConfig
 from .dataset.config import DatasetConfig
 from .base.model_utils.config import ModelUtilsConfig
 
-@staticmethod
-def adam_lambda(params, config: ModelUtilsConfig):
-    return Adam(params, lr=config.learning_rate)
 
 class Config(ModelConfig, DatasetConfig, ModelUtilsConfig):
 
-    ## ------------- ModelUtilsConfig ---------------------------
+    ### ModelConfig
+    batch_norm: bool = True
 
-    device = torch.device("cuda:0")
+    dropout_rate: float = 0.5
+    """probability of an elements to be zeor-ed in dropout layers"""
 
-    learning_rate = 0.001
+    conv_dropout_rate: float = dropout_rate
+    """probability of an elements to be zeor-ed in conv dropout2d layers"""
 
-    optimizer = adam_lambda
-
-    _optimizer_name = "adam"
-
-    # num of epochs per checkpoints
-    # e.g. 1 stand for save model every epoch
-    #      0 for not save until finish
-    epochs_per_checkpoint: int = 0
-
-    # dir for saving checkpoints and log files
-    log_dir: str = "log"
-
-    early_stopping: bool = False
-
-    # only matter when EARLY_STOPPING is set to True
-    early_stopping_threshold: int = 10
 
     ## ------------- DatasetConfig ---------------------------
 
-    # config for torch's DataLoader
-    num_workers = 4
-    persistent_workers = os.name == "nt" and bool(num_workers)
+    num_workers: int = 4
+    """config for torch's DataLoader"""
 
-    # batch sizes
+    persistent_workers: bool = os.name == "nt" and bool(num_workers)
+    """config for torch's DataLoader"""
+
     batch_size = {
         "train": 128,
         "eval": 256,
     }
+
+
+    ## ------------ ModelUtilsConfig ----------------------
+
+    device = torch.device("cuda:0")
+    """Device to use, cpu or gpu"""
+
+    learning_rate: float = 0.001
+
+    epochs_per_checkpoint: int = 0
+    """num of epochs per checkpoints
+
+        Example:
+            1: stand for save model every epoch
+            0: for not save until finish
+    """
+
+    save_best: bool = False
+    """set True to save every time when the model reach highest val_acc"""
+
+    log_dir: str = "log"
+    """dir for saving checkpoints and log files"""
+
+    early_stopping: bool = False
+    """whether enable early stopping"""
+
+    early_stopping_threshold: int = 10
+    """Threshold for early stopping mode. Only matter when EARLY_STOPPING is set to True."""

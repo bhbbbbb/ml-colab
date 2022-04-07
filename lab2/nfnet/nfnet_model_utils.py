@@ -1,14 +1,11 @@
-import os
 from typing import Tuple
 import torch
 from torch import Tensor
 import torch.cuda.amp as amp
 from tqdm import tqdm
 import numpy as np
-from nfnets import SGD_AGC, pretrained_nfnet, NFNet
-from imgclf.base.model_utils import BaseModelUtils
-from imgclf.base.model_utils.model_utils import ModelStates, HistoryUtils
-from imgclf.base.logger import Logger
+from nfnets import SGD_AGC, pretrained_nfnet, NFNet # pylint: disable=import-error
+from imgclf.base.model_utils.base_model_utils import BaseModelUtils
 from imgclf.dataset import Dataset
 from .model import MyNfnet
 from .config import NfnetConfig
@@ -38,7 +35,11 @@ class NfnetModelUtils(BaseModelUtils):
         return
     
     @staticmethod
-    def _inti_model_optimizer(model: NFNet, config: NfnetConfig):
+    def _get_criterion(config):
+        return torch.nn.CrossEntropyLoss()
+
+    @staticmethod
+    def _get_optimizer(model: NFNet, config: NfnetConfig):
 
         optimizer = SGD_AGC(
             # The optimizer needs all parameter names 
@@ -60,7 +61,7 @@ class NfnetModelUtils(BaseModelUtils):
 
             if model.exclude_from_clipping(name):
                 group["clipping"] = None
-        return model, optimizer
+        return optimizer
     
     @staticmethod
     def init_model(config: NfnetConfig):
@@ -84,37 +85,9 @@ class NfnetModelUtils(BaseModelUtils):
         model_state = MyNfnet.fix_output_layer(model_state, config.num_class)
         
         model.load_state_dict(model_state)
-        model, optimizer = cls._inti_model_optimizer(model, config)
 
-        return super().start_new_training(model, config, optimizer)
+        return super().start_new_training(model, config)
     
-    @classmethod
-    def load_checkpoint(cls, model: NFNet, checkpoint_path: str,
-                        config: NfnetConfig, optimizer = None):
-        assert os.path.isfile(checkpoint_path)
-
-        tem = torch.load(checkpoint_path, map_location=torch.device(config.device))
-        checkpoint = ModelStates(**tem)
-
-        model, optimizer = cls._inti_model_optimizer(model, config)
-        model.load_state_dict(checkpoint.model_state_dict)
-        optimizer.load_state_dict(checkpoint.optimizer_state_dict)
-        
-        root = os.path.dirname(checkpoint_path)
-        logger = Logger(root)
-        start_epoch = checkpoint.start_epoch
-        history_utils = HistoryUtils.load_history(root, start_epoch, logger)
-        logger.log(f"Checkpoint {os.path.basename(checkpoint_path)} is loaded.")
-        return cls(
-            model = model,
-            config = config,
-            optimizer = optimizer,
-            start_epoch = start_epoch,
-            root = root,
-            history_utils = history_utils,
-            logger = logger,
-        )
-
     def _train_epoch(self, train_dataset: Dataset) -> Tuple[float, float]:
         self.model.train()
         dataloader = train_dataset.data_loader

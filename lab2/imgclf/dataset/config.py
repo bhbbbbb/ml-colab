@@ -2,11 +2,12 @@ from ..base.config import BaseConfig, UNIMPLEMENTED
 
 class DatasetConfig(BaseConfig):
 
-    # config for torch's DataLoader
     num_workers: int = UNIMPLEMENTED
-    persistent_workers: bool = UNIMPLEMENTED
+    """config for torch's DataLoader"""
 
-    # batch sizes
+    persistent_workers: bool = UNIMPLEMENTED
+    """config for torch's DataLoader"""
+
     batch_size = {
         "train": UNIMPLEMENTED,
         "eval": UNIMPLEMENTED,

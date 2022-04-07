@@ -5,10 +5,11 @@ class ModelConfig(BaseConfig):
 
     batch_norm: bool = True
 
-    # probability of an elements to be zeor-ed in dropout layers
     dropout_rate: float = 0.5
+    """probability of an elements to be zeor-ed in dropout layers"""
 
-    # probability of an elements to be zeor-ed in dropout layers
     conv_dropout_rate: float = dropout_rate
+    """probability of an elements to be zeor-ed in conv dropout2d layers"""
 
     num_class: int = UNIMPLEMENTED
+    """num of classes"""
