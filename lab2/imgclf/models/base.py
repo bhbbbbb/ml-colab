@@ -1,6 +1,6 @@
 import re
 from io import StringIO
-import torch.nn as nn
+from torch import nn
 import torch
 
 

@@ -1,6 +1,6 @@
 from typing import OrderedDict
 import torch
-import torch.nn as nn
+from torch import nn
 import numpy as np
 from nfnets import NFNet # pylint: disable=import-error
 

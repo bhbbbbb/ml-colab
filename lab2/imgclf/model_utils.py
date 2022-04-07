@@ -2,7 +2,7 @@ from typing import Tuple
 from tqdm import tqdm
 import torch
 from torch import Tensor
-import torch.nn as nn
+from torch import nn
 import pandas as pd
 import numpy as np
 
