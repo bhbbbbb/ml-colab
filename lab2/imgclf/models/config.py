@@ -8,4 +8,7 @@ class ModelConfig(BaseConfig):
     # probability of an elements to be zeor-ed in dropout layers
     dropout_rate: float = 0.5
 
+    # probability of an elements to be zeor-ed in dropout layers
+    conv_dropout_rate: float = dropout_rate
+
     num_class: int = UNIMPLEMENTED
