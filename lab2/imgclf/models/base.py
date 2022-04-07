@@ -26,7 +26,7 @@ class _BaseNN(nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.seq(x)
     
-    def summary(self, file = None) -> str:
+    def summary(self, file = None, markdown: bool = False) -> str:
         def prod(arr: list) -> int:
             res = 1
             for a in arr:
@@ -35,10 +35,22 @@ class _BaseNN(nn.Module):
         
         sum_params = 0
         layers_name = "Layer's name"
+        if markdown:
+            start = "|"
+            end = "|\n"
+            sep = "|"
+        else:
+            start = ""
+            end = "\n"
+            sep = "\t"
+        
         sio = StringIO()
-        sio.write(f"{layers_name:45}\t{'Size':<30}\t{'Num of params':>12}\n")
+        sio.write(f"{start}{layers_name:45}{sep}{'Size':<30}{sep}{'Num of params':>12}{end}")
+        if markdown:
+            sio.write("|:-|:-|-:|\n")
         for name, param in self.named_parameters():
-            sio.write(f"{name :45}\t{str(param.size()):<30}\t{prod(param.size()):>12}\n")
+            sio.write(f"{start}")
+            sio.write(f"{name :45}{sep}{str(param.size()):<30}{sep}{prod(param.size()):>12}{end}")
             sum_params += prod(param.size())
         sio.write("--------------------------------------------------------\n")
 
