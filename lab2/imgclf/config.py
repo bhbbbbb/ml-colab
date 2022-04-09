@@ -25,6 +25,9 @@ class Config(ModelConfig, DatasetConfig, ModelUtilsConfig):
     persistent_workers: bool = os.name == "nt" and bool(num_workers)
     """config for torch's DataLoader"""
 
+    pin_memory: bool = True
+    """config for torch's DataLoader"""
+
     batch_size = {
         "train": 128,
         "eval": 256,

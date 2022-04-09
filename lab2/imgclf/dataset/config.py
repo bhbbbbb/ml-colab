@@ -8,6 +8,10 @@ class DatasetConfig(BaseConfig):
     persistent_workers: bool = UNIMPLEMENTED
     """config for torch's DataLoader"""
 
+    pin_memory: bool = UNIMPLEMENTED
+    """config for torch's DataLoader"""
+
+
     batch_size = {
         "train": UNIMPLEMENTED,
         "eval": UNIMPLEMENTED,

@@ -72,6 +72,40 @@ class Dataset(TorchDataset):
         return
     
     @classmethod
+    def train_test_split(
+            cls,
+            df: pd.DataFrame,
+            train_ratio: float,
+            config: DatasetConfig,
+            transforms_f: Tuple[transforms.Compose, transforms.Compose] = None,
+            modes: Tuple[Literal, Literal] = ("train", "eval"),
+        ):
+        """get train, test dataset by split then with given ratio
+
+        Args:
+            df (pd.DataFrame): same as __init__
+            train_ratio (float): the ratio split for trainset. If the ratio < 1, the rest would be
+                in the test set.
+            modes (tuple): dataset modes for the returning dataset. Default to ['train', 'eval']
+        """
+
+        assert train_ratio < 1
+        num_samples = df.shape[0]
+        train_set_size = int(num_samples * train_ratio)
+        SEED = 0xAAAAAAAA
+
+        train_df, eval_df = train_test_split(df, train_size=train_set_size,
+                            shuffle=True, random_state=SEED)
+        
+        if transforms_f is None: # use default transform
+            transforms_f = (None, None)
+
+        return (
+            cls(train_df, config=config, mode=modes[0], transform=transforms_f[0]),
+            cls(eval_df,  config=config, mode=modes[1], transform=transforms_f[1]),
+        )
+    
+    @classmethod
     def split(
             cls,
             df: pd.DataFrame,
@@ -79,7 +113,7 @@ class Dataset(TorchDataset):
             config: DatasetConfig,
             transforms_f: Tuple[transforms.Compose, transforms.Compose] = None,
         ):
-        """get dataset by split then with given ratio
+        """get train, valid, test dataset by split then with given ratio
 
         Args:
             df (pd.DataFrame): same as __init__
@@ -92,25 +126,11 @@ class Dataset(TorchDataset):
         assert sumation <= 1.0,\
             f"the sumation of split_ratio is expected to be <= 1, got {sumation}"
 
-        tem_dataset = cls(df, config=config)
-        train_set_size = int(len(tem_dataset) * split_ratio[0])
-        valid_set_size = int(len(tem_dataset) * split_ratio[1])
-        # test_set_size = len(tem_dataset) - train_set_size - valid_set_size
-        seed = 0xAAAAAAAA
-
-        train_df, eval_df = train_test_split(tem_dataset.df, train_size=train_set_size,
-                            shuffle=True, random_state=seed)
-
-        valid_df, test_df = train_test_split(eval_df, train_size=valid_set_size,
-                            shuffle=True, random_state=seed)
-        
-        if transforms_f is None: # use default transform
-            transforms_f = (None, None)
-        return (
-            cls(train_df, config=config, mode="train", transform=transforms_f[0]),
-            cls(valid_df, config=config, mode="eval", transform=transforms_f[1]),
-            cls(test_df, config=config, mode="eval", transform=transforms_f[1]),
-        )
+        train_set, eval_set = cls.train_test_split(df, split_ratio[0], config, transforms_f)
+        valid_set_ratio = split_ratio[1] / (1 - split_ratio[0])
+        valid_set, test_set = cls.train_test_split(eval_set.df, valid_set_ratio, config,
+                                transforms_f, modes=["eval", "eval"])
+        return train_set, valid_set, test_set
 
     def __getitem__(self, index):
         # --------------------------------------------
@@ -148,5 +168,6 @@ class Dataset(TorchDataset):
             batch_size = self.config.batch_size[mode],
             shuffle = self.mode == "train",
             num_workers = self.config.num_workers,
-            persistent_workers= self.config.persistent_workers,
+            persistent_workers = self.config.persistent_workers,
+            pin_memory = self.config.pin_memory,
         )
