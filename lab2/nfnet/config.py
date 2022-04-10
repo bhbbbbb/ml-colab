@@ -5,7 +5,7 @@ class NfnetConfig(Config):
 
     # Model
     variant = 'F1'         # F0 - F7
-    # num_classes = 1000     # Number of classes
+    num_class = 15     # Number of classes
     activation = 'gelu'    # or 'relu'
     stochdepth_rate = 0.25 # 0-1, the probability that a layer is dropped during one step
     alpha = 0.2            # Scaling factor at the end of each block
@@ -19,7 +19,7 @@ class NfnetConfig(Config):
     overfit = False        # Train on one batch size only
 
     # learning_rate = 0.1    # Learning rate
-    scale_lr = True        # Scale learning rate with batch size. lr = lr*batch_size/256
+    # scale_lr = True        # Scale learning rate with batch size. lr = lr*batch_size/256
     momentum = 0.9         # Contribution of earlier gradient to gradient update
     weight_decay = 0.00002 # Factor with which weights are added to gradient
     nesterov = True        # Enable nesterov correction

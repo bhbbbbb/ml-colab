@@ -155,7 +155,6 @@ class NfnetModelUtils(BaseModelUtils):
                 _, predicted = torch.max(output, 1)
                 correct_labels += (predicted == targets).sum().item()
 
-        print(predicted)
         eval_loss = eval_loss / len(eval_dataset)
         eval_acc = correct_labels / len(eval_dataset)
         return eval_loss, eval_acc
