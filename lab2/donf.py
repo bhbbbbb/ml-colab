@@ -78,14 +78,13 @@ def get_config(batch_size):
 
 def get_df():
     if not os.path.isfile("set.csv"):
-        get_samples_list()
         def get_samples_list():
             img_list = np.array([], dtype=str)
             label_list = np.array([], dtype=int)
             for idx, cat in enumerate(CATS):
                 sub_root = os.path.join(DATASET_ROOT, cat)
                 sub_img_list = np.array(os.listdir(sub_root))
-                sub_root += "\\"
+                sub_root += "/"
                 sub_img_list = np.char.add(sub_root, sub_img_list)
                 img_list = np.concatenate((img_list, sub_img_list))
                 label_list = np.concatenate((label_list, np.full([len(sub_img_list)], idx)))
@@ -93,6 +92,7 @@ def get_df():
             df = pd.DataFrame({"img": img_list, "label": label_list})
             df.to_csv("set.csv")
             return
+        get_samples_list()
     return pd.read_csv("set.csv", usecols=["img", "label"], dtype={"img": str, "label": np.int64})
 
 def train(mode: str, batch_size, epochs, weight_path: str):
