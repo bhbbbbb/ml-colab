@@ -2,8 +2,11 @@ import os
 from torchvision import transforms as T
 from torchvision.datasets import MNIST, CIFAR10
 from torch.utils.data import DataLoader
+from torch import Generator
 from model_utils.base.config import BaseConfig
 from .mode import Mode as M
+
+SEED = 0xAAAAAAA
 
 class DatasetConfig(BaseConfig):
 
@@ -47,6 +50,7 @@ class Dataset(MNIST):
             pin_memory=self.config.pin_memory,
             num_workers=self.config.num_workers,
             persistent_workers=self.config.persistent_workers,
+            generator=Generator().manual_seed(SEED),
         )
 
 class DatasetCIFAR10(CIFAR10):
@@ -74,4 +78,5 @@ class DatasetCIFAR10(CIFAR10):
             pin_memory=self.config.pin_memory,
             num_workers=self.config.num_workers,
             persistent_workers=self.config.persistent_workers,
+            generator=Generator().manual_seed(SEED),
         )

@@ -69,6 +69,16 @@ class Preprocessor:
         # b x c x (w * h)
         img_p = img_p.reshape(b, c, w, h)
         return img_p
+    
+    def print_percentage(self):
+        percent = []
+        labels = self.model.labels_.tolist()
+        for i in range(len(self.model.cluster_centers_)):
+            j = labels.count(i)
+            j = j / (len(labels))
+            percent.append(j)
+        percent.sort()
+        print(percent)
 
 
 
