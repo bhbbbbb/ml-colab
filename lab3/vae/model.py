@@ -32,18 +32,24 @@ class Encoder(nn.Module):
         self.conv1 = nn.Conv2d(config.input_shape[-1], c, kernel_size=4, stride=2, padding=1)
         # out: 1 x w/2 x h/2
         self.conv2 = nn.Conv2d(c, c*2, kernel_size=4, stride=2, padding=1)
-        # out: c*2 x w/4 x h/4
-        dim_in = c * 2 * (config.input_shape[0] // 4) ** 2
+        c = c * 2
+        dim_in = c * (config.input_shape[0] // 4) ** 2
+
         if config.deep:
+            self.conv3 = nn.Conv2d(c, c*2, kernel_size=4, stride=2, padding=1)
+            dim_in = dim_in // 2
             dim_out = dim_in // 2
             self.fc = nn.Linear(dim_in, dim_out)
             dim_in = dim_out
+        
         self.fc_mu = nn.Linear(dim_in, config.latent_dims)
         self.fc_logvar = nn.Linear(dim_in, config.latent_dims)
             
     def forward(self, x: Tensor):
         x = F.relu(self.conv1(x))
         x = F.relu(self.conv2(x))
+        if self.config.deep:
+            x = F.relu(self.conv3(x))
 
         # flatten batch of multi-channel feature maps to a batch of feature vectors
         x = x.reshape(x.size(0), -1)
@@ -60,12 +66,14 @@ class Decoder(nn.Module):
         c = config.capacity * config.input_shape[-1]
         dim = c * 2 * (config.input_shape[0] // 4) ** 2
         if config.deep:
+            dim = dim // 2
             self.fc = nn.Sequential(
                 nn.Linear(config.latent_dims, dim // 2),
                 nn.ReLU(inplace=True),
                 nn.Linear(dim // 2, dim),
                 nn.ReLU(inplace=True),
             )
+            self.conv3 = nn.ConvTranspose2d(c*4, c*2, kernel_size=4, stride=2, padding=1)
         else:
             self.fc = nn.Sequential(
                 nn.Linear(config.latent_dims, dim),
@@ -79,8 +87,13 @@ class Decoder(nn.Module):
         x = self.fc(x)
         dim = self.config.input_shape[0] // 4
         c = self.config.capacity * 2 * self.config.input_shape[-1]
+        if self.config.deep:
+            c *= 2
+            dim = dim // 2
         x = x.view(x.size(0), c, dim, dim)
         # unflatten batch of feature vectors to a batch of multi-channel feature maps
+        if self.config.deep:
+            x = F.relu(self.conv3(x))
         x = F.relu(self.conv2(x))
         x = self.conv1(x)
         # # b x c x w x h
@@ -132,8 +145,8 @@ class VariationalAutoencoder(nn.Module):
         # but averaging makes the weight of the other loss term independent of the image resolution.
         # dim = self.config.input_shape[0] ** 2
         # x: b x c x w x h
-        # recon_loss = F.binary_cross_entropy(recon_x, x, reduction="sum")
-        recon_loss = F.mse_loss(recon_x, x, reduction="sum")
+        recon_loss = F.binary_cross_entropy(recon_x, x, reduction="sum")
+        # recon_loss = F.mse_loss(recon_x, x, reduction="sum")
         #MSEloss
         # KL-divergence between the prior distribution over latent vectors
         # (the one we are going to sample from when generating new images)

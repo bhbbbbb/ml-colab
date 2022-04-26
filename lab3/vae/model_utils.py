@@ -280,6 +280,7 @@ def train_kmeans(train_set: DatasetMNIST, config: ModelUtilsConfig, show: bool =
         _show(first_batch)
         _show(predict_and_recover(kmeans, first_batch), "pro")
 
-    os.makedirs(config.kmeans_model_path, exist_ok=True)
+    model_dir = os.path.dirname(config.kmeans_model_path)
+    os.makedirs(model_dir, exist_ok=True)
     joblib.dump(kmeans, config.kmeans_model_path)
     return kmeans

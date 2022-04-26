@@ -1,8 +1,5 @@
-from enum import Enum, auto
+class Mode:
 
-class Mode(Enum):
-
-    TRAIN = auto()
-    EVAL = auto()
-    INFERENCE = auto()
+    TRAIN = "train"
+    EVAL = "eval"
     
