@@ -1,4 +1,4 @@
-from model_utils.config import UNIMPLEMENTED, register_checking_hook
+from model_utils.base.config import UNIMPLEMENTED, register_checking_hook
 from .dataset import DatasetConfig
 from .model_utils import ModelUtilsConfig
 from .model import ModelConfig
@@ -44,16 +44,17 @@ class Config(ModelUtilsConfig, DatasetConfig, ModelConfig):
     early_stopping_threshold: int = 25
     """Threshold for early stopping mode. Only matter when EARLY_STOPPING is set to True."""
 
-    early_stopping_by_acc: bool = False
-    """
-    Early stopping with valid_acc as criterion, cannot be true if enable_accuracy is False.
-    Turn off to use valid_loss as criterion.
-    """
+    # early_stopping_by_acc: bool = False
+    # """
+    # Early stopping with valid_acc as criterion, cannot be true if enable_accuracy is False.
+    # Turn off to use valid_loss as criterion.
+    # """
 
-    enable_accuracy: bool = False
-    """Whether enable logging accuracy in history. Turn off to use loss only."""
+    # enable_accuracy: bool = False
+    # """Whether enable logging accuracy in history. Turn off to use loss only."""
 
     @register_checking_hook
     def fix_input_shape(self):
-        self.input_shape = self.input_shape[0], self.n_clusters
+        if self.preprocessing:
+            self.input_shape = self.input_shape[0], self.n_clusters
         return

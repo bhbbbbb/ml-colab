@@ -3,6 +3,7 @@ from tqdm import tqdm
 import torch
 from torch import nn
 from torch import Tensor
+from torch.nn import functional as F
 from torch.optim import Adam
 from sklearn.cluster import MiniBatchKMeans
 import joblib
@@ -10,8 +11,9 @@ import torchvision.utils
 import numpy as np
 import matplotlib.pyplot as plt
 from model_utils import BaseModelUtils
+from model_utils.base.criteria import Loss, Criteria
 from model_utils.config import ModelUtilsConfig as BaseModelUtilsConfig
-from .dataset import Dataset
+from .dataset import DatasetMNIST
 from .model import VariationalAutoencoder
 from .preprocess import _Transform, PreprocessingConfig, Preprocessor
 
@@ -19,6 +21,37 @@ class ModelUtilsConfig(BaseModelUtilsConfig, PreprocessingConfig):
     preprocessing: bool = True
 
 
+@Criteria.register_criterion
+class OverallLoss(Loss):
+
+    short_name: str = "overall_loss"
+    full_name: str = "Overall Loss"
+    
+    plot: bool = True
+    """Whether plot this criterion"""
+
+    primary: bool = True
+
+@Criteria.register_criterion
+class ReconstructLoss(Loss):
+
+    short_name: str = "recon_loss"
+    full_name: str = "Reconstruct Loss"
+    
+    plot: bool = False
+    """Whether plot this criterion"""
+
+    primary: bool = False
+@Criteria.register_criterion
+class KLDLoss(Loss):
+
+    short_name: str = "kl_loss"
+    full_name: str = "KLD Loss"
+    
+    plot: bool = False
+    """Whether plot this criterion"""
+
+    primary: bool = False
 
 class ModelUtils(BaseModelUtils):
 
@@ -30,17 +63,20 @@ class ModelUtils(BaseModelUtils):
     def _get_optimizer(model: nn.Module, config: ModelUtilsConfig):
         return Adam(model.parameters(), lr=config.learning_rate, weight_decay=1e-5)
     
-    def train(self, epochs: int, trainset: Dataset,
-                validset: Dataset = None, testset: Dataset = None) -> str:
+    def train(self, epochs: int, trainset: DatasetMNIST,
+                validset: DatasetMNIST = None, testset: DatasetMNIST = None) -> str:
         if self.config.preprocessing:
             self.preprocessor = Preprocessor(self.config)
         return super().train(epochs, trainset, validset, testset)
 
-    def _train_epoch(self, train_dataset: Dataset):
+    def _train_epoch(self, train_dataset: DatasetMNIST):
 
         self.model.train()
 
         train_loss = 0.0
+        train_recon_loss = 0.0
+        train_kl_loss = 0.0
+
         for img, _ in tqdm(train_dataset.dataloader):
             
             img: Tensor
@@ -52,24 +88,41 @@ class ModelUtils(BaseModelUtils):
             outputs: Tensor = self.model(img)
             # print(image_batch_recon.shape)
             # reconstruction error
-            loss= self.model.criterion(img, *outputs)
+            overall_loss, recon_loss, kl_loss = self.model.criterion(img, *outputs)
+
+            # print(recon_loss)
+            # self.logger.file.log(recon_loss)
+            # self.logger.file.log(str(img[0][0]))
+            # self.logger.file.log(str(outputs[0][0]))
             
             # backpropagation
             self.optimizer.zero_grad()
-            loss.backward()
+            overall_loss.backward()
             
             # one step of the optmizer (using the gradients from backpropagation)
             self.optimizer.step()
             
-            train_loss += loss.item()
+            train_loss += overall_loss.item()
+            train_recon_loss += recon_loss.item()
+            train_kl_loss += kl_loss.item()
+            
         
         train_loss /= len(train_dataset)
-        return train_loss
+        train_recon_loss /= len(train_dataset)
+        train_kl_loss /= len(train_dataset)
+        return Criteria(
+            OverallLoss(train_loss),
+            ReconstructLoss(train_recon_loss),
+            KLDLoss(train_kl_loss),
+        )
     
-    def _eval_epoch(self, eval_dataset: Dataset):
+    def _eval_epoch(self, eval_dataset: DatasetMNIST):
         self.model.eval()
 
         eval_loss = 0.0
+        eval_recon_loss = 0.0
+        eval_kl_loss = 0.0
+        
         for img, _ in eval_dataset.dataloader:
             
             img: Tensor
@@ -81,16 +134,33 @@ class ModelUtils(BaseModelUtils):
 
             # vae reconstruction
             outputs: Tensor = self.model(img)
+            # if eval_loss == 0:
+            #     sample = outputs[0][0]
+            #     ans = img[0]
+            #     print(sample)
+            #     print(ans)
+            #     print(sample.shape)
             # print(image_batch_recon.shape)
             # reconstruction error
-            loss: Tensor = self.model.criterion(img, *outputs)
+            overall_loss, recon_loss, kl_loss = self.model.criterion(img, *outputs)
             
-            eval_loss += loss.item()
+            tem = overall_loss.item()
+            # if eval_loss == 0:
+            #     print(f"first loss: {tem}")
+            eval_loss += tem
+            eval_recon_loss += recon_loss.item()
+            eval_kl_loss += kl_loss.item()
         
         eval_loss /= len(eval_dataset)
-        return eval_loss
+        eval_recon_loss /= len(eval_dataset)
+        eval_kl_loss /= len(eval_dataset)
+        return Criteria(
+            OverallLoss(eval_loss),
+            ReconstructLoss(eval_recon_loss),
+            KLDLoss(eval_kl_loss),
+        )
 
-    def visualise_output(self, dataset: Dataset):
+    def visualise_output(self, dataset: DatasetMNIST):
         self.model.eval()
         dataloader = dataset.dataloader
         images, _ = next(iter(dataloader))
@@ -120,37 +190,49 @@ class ModelUtils(BaseModelUtils):
                 show(images, "reconstructional")
             
 
-    def visualise_2d_lantent_space(self):
+    def visualise_2d_lantent_space(self, width: float = 1.5):
+        def do(latents: Tensor, name_suffixes: str = ""):
+            with torch.inference_mode():
+                # reconstruct images from the latent vectors
+                latents = latents.to(self.config.device)
+                image_recon: Tensor = self.model.decoder(latents)
+                image_recon = image_recon.cpu()
+                fig, ax = plt.subplots(figsize=(10, 10))
+                images = image_recon.data[:(SIZE ** 2)]
+                if self.config.preprocessing:
+                    self.preprocessor = Preprocessor(self.config)
+                    images = self.preprocessor.inference(images)
+
+                show_image(torchvision.utils.make_grid(images, 20, 5))
+                path = os.path.join(self.root, f"2d_lantent_space{name_suffixes}")
+                plt.savefig(path)
+                plt.show()
+            return
+        
         # load a network that was trained with a 2d latent space
-        assert self.model.config.latent_dims == 2,\
+        assert self.model.config.latent_dims in [2, 4],\
             "Please change the parameters to two latent dimensions."
         
         SIZE = 20
-        with torch.no_grad():
-            # create a sample grid in 2d latent space
-            latent_x = np.linspace(-1.5,1.5,SIZE)
-            latent_y = np.linspace(-1.5,1.5,SIZE)
-            latents = torch.FloatTensor(len(latent_y), len(latent_x), 2)
-            for i, lx in enumerate(latent_x):
-                for j, ly in enumerate(latent_y):
-                    latents[j, i, 0] = lx
-                    latents[j, i, 1] = ly
-            latents = latents.view(-1, 2) # flatten grid into a batch
+        # create a sample grid in 2d latent space
+        latent_x = np.linspace(-1 * width, width, SIZE)
+        latent_y = np.linspace(-1 * width, width, SIZE)
+        latents = torch.FloatTensor(len(latent_y), len(latent_x), 2)
+        for i, lx in enumerate(latent_x):
+            for j, ly in enumerate(latent_y):
+                latents[j, i, 0] = lx
+                latents[j, i, 1] = ly
+        latents = latents.view(-1, 2) # flatten grid into a batch
+        if self.model.config.latent_dims == 4:
+            paddings = [(0, 2), (1, 1), (2, 0)]
+            for padding in paddings:
+                latents_ = F.pad(latents, padding)
+                name = str(padding).replace(", ", "_")
+                do(latents_, name)
 
-            # reconstruct images from the latent vectors
-            latents = latents.to(self.config.device)
-            image_recon: Tensor = self.model.decoder(latents)
-            image_recon = image_recon.cpu()
-            fig, ax = plt.subplots(figsize=(10, 10))
-            images = image_recon.data[:(SIZE ** 2)]
-            if self.config.preprocessing:
-                self.preprocessor = Preprocessor(self.config)
-                images = self.preprocessor.inference(images)
-
-            show_image(torchvision.utils.make_grid(images, 20, 5))
-            path = os.path.join(self.root, "2d_lantent_space")
-            plt.savefig(path)
-            plt.show()
+        else:
+            do(latents)
+            
 
 
 # This function takes as an input the images to reconstruct
@@ -165,7 +247,7 @@ def show_image(img):
     npimg = img.numpy()
     plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
-def train_kmeans(train_set: Dataset, config: ModelUtilsConfig, show: bool = True):
+def train_kmeans(train_set: DatasetMNIST, config: ModelUtilsConfig, show: bool = True):
     idx = 0
     kmeans = MiniBatchKMeans(n_clusters=config.n_clusters)
     transform = _Transform()
@@ -198,5 +280,6 @@ def train_kmeans(train_set: Dataset, config: ModelUtilsConfig, show: bool = True
         _show(first_batch)
         _show(predict_and_recover(kmeans, first_batch), "pro")
 
+    os.makedirs(config.kmeans_model_path, exist_ok=True)
     joblib.dump(kmeans, config.kmeans_model_path)
     return kmeans

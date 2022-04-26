@@ -26,7 +26,7 @@ IMG_TRANSFORM = T.Compose([
     T.ToTensor()
 ])
 
-class Dataset(MNIST):
+class DatasetMNIST(MNIST):
     mode: M
     config: DatasetConfig
 
