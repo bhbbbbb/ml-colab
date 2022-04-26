@@ -6,6 +6,6 @@ setup(
     packages=find_packages(),
     license="MIT",
     description="lab3",
-    install_requires=["pytorch-model-utils"],
+    install_requires=["pytorch-model-utils @ git+https://github.com/bhbbbbb/pytorch-model-utils@fc95bb6"],
     dependency_links=["git+https://github.com/bhbbbbb/pytorch-model-utils@fc95bb6"],
 )
