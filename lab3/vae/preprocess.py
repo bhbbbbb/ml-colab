@@ -9,7 +9,7 @@ from model_utils.base.config import BaseConfig, UNIMPLEMENTED
 
 class PreprocessingConfig(BaseConfig):
     n_clusters: int = 128
-    kmeans_model_path: str = UNIMPLEMENTED
+    kmeans_model_path: str = ""
     
 
 class Preprocessor:
