@@ -97,7 +97,7 @@ def get_config(batch_size):
     config = NfnetConfig(variant=VAR, log_dir=os.environ["LOG_ROOT"])
     config.batch_size["train"] = batch_size
     config.batch_size["eval"] = batch_size
-    config.num_class = 10
+    config.num_class = len(CATS)
     config.learning_rate = 0.1 * batch_size / 256
     config.display()
     return config
