@@ -210,8 +210,8 @@ class ModelUtils(BaseModelUtils):
             return
         
         # load a network that was trained with a 2d latent space
-        assert self.model.config.latent_dims in [2, 4],\
-            "Please change the parameters to two latent dimensions."
+        assert self.model.config.latent_dims >= 2,\
+            "latent_dims have to be greater than 2"
         
         SIZE = 20
         # create a sample grid in 2d latent space
@@ -223,13 +223,15 @@ class ModelUtils(BaseModelUtils):
                 latents[j, i, 0] = lx
                 latents[j, i, 1] = ly
         latents = latents.view(-1, 2) # flatten grid into a batch
-        if self.model.config.latent_dims == 4:
-            paddings = [(0, 2), (1, 1), (2, 0)]
-            for padding in paddings:
+        
+        remain_dim = self.model.config.latent_dims - 2
+        if remain_dim:
+            for l_pad in range(remain_dim + 1):
+                r_pad = remain_dim - l_pad
+                padding = (l_pad, r_pad)
                 latents_ = F.pad(latents, padding)
                 name = str(padding).replace(", ", "_")
                 do(latents_, name)
-
         else:
             do(latents)
             

@@ -3,3 +3,4 @@ test.*
 data
 log
 *.egg-info
+do.py
