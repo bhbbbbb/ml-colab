@@ -43,8 +43,6 @@ class Dataset(TorchDataset):
             | <path to image2> | <label of image2> |
             | &vellip; | &vellip; |
 
-            for mode `inference`, df can only contain `img` column
-
             mode: Defaults to "train".
         """
         assert mode in ["train", "eval", "inference"], f"unknown type of mode: {mode}"
@@ -58,8 +56,8 @@ class Dataset(TorchDataset):
             )
             df["label"] = df["label"].astype(np.int64)
         
-        else:
-            assert len(df.columns) == 1, f"Except only a column in df, got {df.columns}"
+        # else:
+        #     assert len(df.columns) == 1, f"Except only a column in df, got {df.columns}"
 
         self.mode = mode
         self.df = df
@@ -141,7 +139,7 @@ class Dataset(TorchDataset):
         if self.mode != "inference":
             imgpath, label = self.df.iloc[index]
         else:
-            imgpath, = self.df.iloc[index]
+            imgpath = self.df["img"].iloc[index]
         
         img = Image.open(imgpath).convert("RGB")
         img = self.transform(img)
